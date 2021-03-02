@@ -13,7 +13,9 @@ add_library(koinos_crypto STATIC
             openssl.cpp
             ${HEADERS})
 
-target_link_libraries(koinos_crypto Koinos::exception Koinos::types OpenSSL::SSL OpenSSL::Crypto secp256k1)
+target_link_libraries(koinos_crypto PRIVATE Koinos::exception Koinos::types OpenSSL::SSL OpenSSL::Crypto secp256k1)
+
+target_compile_definitions(koinos_crypto PUBLIC _GNU_SOURCE)
 
 target_include_directories(koinos_crypto PUBLIC
    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
