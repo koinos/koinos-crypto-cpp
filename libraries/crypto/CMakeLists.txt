@@ -1,4 +1,4 @@
-find_package(secp256k1 REQUIRED)
+find_package(libsecp256k1 CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Boost CONFIG REQUIRED log log_setup filesystem)
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -13,7 +13,7 @@ add_library(koinos_crypto STATIC
             openssl.cpp
             ${HEADERS})
 
-target_link_libraries(koinos_crypto PRIVATE Koinos::exception Koinos::types OpenSSL::SSL OpenSSL::Crypto secp256k1)
+target_link_libraries(koinos_crypto PRIVATE Koinos::exception Koinos::types OpenSSL::SSL OpenSSL::Crypto secp256k1::secp256k1)
 
 target_compile_definitions(koinos_crypto PUBLIC _GNU_SOURCE)
 

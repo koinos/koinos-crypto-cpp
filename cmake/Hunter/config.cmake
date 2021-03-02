@@ -32,3 +32,8 @@ hunter_config(koinos_types
       BUILD_TESTS=OFF
 )
 
+hunter_config(libsecp256k1
+   URL "https://github.com/soramitsu/soramitsu-libsecp256k1/archive/c7630e1bac638c0f16ee66d4dce7b5c49eecbaa5.tar.gz"
+   SHA1 "0534fa8948f279b26fd102905215a56f0ad7fa18"
+)
+
