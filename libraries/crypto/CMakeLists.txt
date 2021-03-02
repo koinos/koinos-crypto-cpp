@@ -7,7 +7,7 @@ find_package(koinos_exception CONFIG REQUIRED)
 find_package(koinos_log CONFIG REQUIRED)
 
 file(GLOB HEADERS "include/koinos/crypto/*.hpp")
-add_library(koinos_crypto
+add_library(koinos_crypto STATIC
             elliptic.cpp
             multihash.cpp
             openssl.cpp
