@@ -7,15 +7,13 @@ find_package(koinos_exception CONFIG REQUIRED)
 find_package(koinos_log CONFIG REQUIRED)
 
 file(GLOB HEADERS "include/koinos/crypto/*.hpp")
-add_library(koinos_crypto STATIC
+add_library(koinos_crypto
             elliptic.cpp
             multihash.cpp
             openssl.cpp
             ${HEADERS})
 
-target_link_libraries(koinos_crypto PRIVATE Koinos::exception Koinos::types OpenSSL::SSL OpenSSL::Crypto secp256k1::secp256k1)
-
-target_compile_definitions(koinos_crypto PUBLIC _GNU_SOURCE)
+target_link_libraries(koinos_crypto PUBLIC Koinos::exception Koinos::types OpenSSL::SSL OpenSSL::Crypto secp256k1::secp256k1)
 
 target_include_directories(koinos_crypto PUBLIC
    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
