@@ -2,12 +2,9 @@
 #include <koinos/pack/rt/basetypes.hpp>
 #include <koinos/exception.hpp>
 
-#include <secp256k1.h>
-
 namespace koinos::crypto {
 
    using recoverable_signature = fixed_blob< 65 >;                         ///< A 65 byte recoverable ECDSA siganture
-   using public_key_data       = fixed_blob< sizeof( secp256k1_pubkey ) >; ///< The full non-compressed ECDSA public key point
    using compressed_public_key = fixed_blob< 33 >;                         ///< The 33 byte compressed ECDSA public key
    using private_key_secret    = fixed_blob< 32 >;                         ///< The 32 byte ECDSA prvate key secret
 
@@ -15,6 +12,8 @@ namespace koinos::crypto {
    KOINOS_DECLARE_EXCEPTION( key_recovery_error );
    KOINOS_DECLARE_EXCEPTION( key_manipulation_error );
    KOINOS_DECLARE_EXCEPTION( signing_error );
+
+   namespace detail { struct public_key_impl; }
 
    /**
     *  @class public_key
@@ -59,12 +58,9 @@ namespace koinos::crypto {
          public_key& operator =( public_key&& pk );
          public_key& operator =( const public_key& pk );
 
-         inline friend bool operator ==( const public_key& a, const public_key& b )
-         {
-            return std::memcmp( a._key.data(), b._key.data(), sizeof(public_key_data) ) == 0;
-         }
+         friend bool operator ==( const public_key& a, const public_key& b );
 
-         inline friend bool operator !=( const public_key& a, const public_key& b )
+         friend bool operator !=( const public_key& a, const public_key& b )
          {
             return !(a == b);
          }
@@ -82,9 +78,8 @@ namespace koinos::crypto {
 
       private:
          friend class private_key;
-         static public_key from_key_data( const public_key_data& v );
 
-         public_key_data _key;
+         std::unique_ptr< detail::public_key_impl > _my;
    };
 
    /**

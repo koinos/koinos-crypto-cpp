@@ -7,6 +7,7 @@
 #include <boost/core/ignore_unused.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
+#include <secp256k1.h>
 #include <secp256k1_recovery.h>
 
 namespace koinos::crypto {
@@ -62,10 +63,120 @@ static int extended_nonce_function( unsigned char *nonce32, const unsigned char 
    return secp256k1_nonce_function_default( nonce32, msg32, key32, algo16, nullptr, *extra );
 }
 
-const public_key_data& empty_pub()
-{
-   static const public_key_data empty_pub{};
-   return empty_pub;
+namespace detail {
+
+   using public_key_data = fixed_blob< sizeof( secp256k1_pubkey ) >; ///< The full non-compressed ECDSA public key point
+
+   const public_key_data& empty_pub()
+   {
+      static const public_key_data empty_pub{};
+      return empty_pub;
+   }
+
+   struct public_key_impl
+   {
+      public_key_impl();
+      public_key_impl( const public_key_impl& k );
+      public_key_impl( public_key_impl&& pk );
+
+      ~public_key_impl();
+
+      compressed_public_key serialize()const;
+
+      public_key_impl add( const multihash& offset )const;
+
+      bool valid()const;
+
+      friend bool operator ==( const public_key_impl& a, const public_key_impl& b )
+      {
+         return std::memcmp( a._key.data(), b._key.data(), sizeof(public_key_data) ) == 0;
+      }
+
+      std::string to_base58() const;
+      std::string to_address( uint8_t prefix ) const;
+
+      unsigned int fingerprint() const;
+
+      public_key_data _key;
+   };
+
+   public_key_impl::public_key_impl() { _init_lib(); }
+
+   public_key_impl::public_key_impl( const public_key_impl& pk ) : _key( pk._key ) { _init_lib(); }
+
+   public_key_impl::public_key_impl( public_key_impl&& pk ) : _key( std::move( pk._key ) ) { _init_lib(); }
+
+   public_key_impl::~public_key_impl() {}
+
+   compressed_public_key public_key_impl::serialize()const
+   {
+      KOINOS_ASSERT( _key != empty_pub(), key_serialization_error, "Cannot serialize an empty public key" );
+
+      compressed_public_key cpk;
+      size_t len = cpk.size();
+      KOINOS_ASSERT(
+         secp256k1_ec_pubkey_serialize(
+            _get_context(),
+            (unsigned char *) cpk.data(),
+            &len,
+            (const secp256k1_pubkey*) _key.data(),
+            SECP256K1_EC_COMPRESSED ),
+         key_serialization_error, "Unknown error during public key serialization" );
+      KOINOS_ASSERT( len == cpk.size(), key_serialization_error,
+         "Serialized key does not match expected size of ${n} bytes", ("n", cpk.size()) );
+
+      return cpk;
+   }
+
+   public_key_impl public_key_impl::add( const multihash& hash )const
+   {
+      KOINOS_ASSERT( hash.digest.size() == 32, key_manipulation_error, "Digest must be 32 bytes" );
+      KOINOS_ASSERT( _key != empty_pub(), key_manipulation_error, "Cannot add to an empty key" );
+      public_key_impl new_key( *this );
+      KOINOS_ASSERT(
+         secp256k1_ec_pubkey_tweak_add(
+            _get_context(),
+            (secp256k1_pubkey*) new_key._key.data(),
+            (unsigned char*) hash.digest.data() ),
+         key_manipulation_error, "Unknown error when adding to public key" );
+      return new_key;
+   }
+
+   bool public_key_impl::valid()const
+   {
+      return _key != empty_pub();
+   }
+
+   std::string public_key_impl::to_base58() const
+   {
+      KOINOS_ASSERT( _key != empty_pub(), key_serialization_error, "Cannot serialize an empty key" );
+      compressed_public_key cpk = serialize();
+      return public_key::to_base58( cpk );
+   }
+
+   std::string public_key_impl::to_address( uint8_t prefix )const
+   {
+      auto compressed_key = serialize();
+      auto sha256 = hash_str( CRYPTO_SHA2_256_ID, compressed_key.data(), compressed_key.size() );
+      auto ripemd160 = hash_str( CRYPTO_RIPEMD160_ID, sha256.digest.data(), sha256.digest.size() );
+      fixed_blob< 25 > d;
+      d[0] = prefix;
+      std::memcpy( d.data() + 1, ripemd160.digest.data(), ripemd160.digest.size() );
+      sha256 = hash_str( CRYPTO_SHA2_256_ID, d.data(), ripemd160.digest.size() + 1 );
+      sha256 = hash_str( CRYPTO_SHA2_256_ID, sha256.digest.data(), sha256.digest.size() );
+      std::memcpy( d.data() + ripemd160.digest.size() + 1, sha256.digest.data(), 4 );
+      std::string b58;
+      koinos::pack::util::encode_base58( b58, d );
+      return b58;
+   }
+
+   unsigned int public_key_impl::fingerprint() const
+   {
+      multihash sha256 = hash_str( CRYPTO_SHA2_256_ID, _key.data(), _key.size() );
+      multihash ripemd160 = hash_str( CRYPTO_RIPEMD160_ID, sha256.digest.data(), sha256.digest.size() );
+      unsigned char* fp = (unsigned char*) ripemd160.digest.data();
+      return (fp[0] << 24) | (fp[1] << 16) | (fp[2] << 8) | fp[3];
+   }
 }
 
 const private_key_secret& empty_priv()
@@ -74,33 +185,15 @@ const private_key_secret& empty_priv()
    return empty_priv;
 }
 
-
-public_key::public_key() { _init_lib(); }
-
-public_key::public_key( const public_key& pk ) : _key( pk._key ) { _init_lib(); }
-
-public_key::public_key( public_key&& pk ) : _key( std::move( pk._key ) ) { _init_lib(); }
+public_key::public_key() : _my( std::make_unique< detail::public_key_impl >() ) {}
+public_key::public_key( const public_key& k ) : _my( std::make_unique< detail::public_key_impl >( *k._my ) ) {}
+public_key::public_key( public_key&& k ) : _my( std::move( k._my ) ) {}
 
 public_key::~public_key() {}
 
-compressed_public_key public_key::serialize()const
+compressed_public_key public_key::serialize() const
 {
-   KOINOS_ASSERT( _key != empty_pub(), key_serialization_error, "Cannot serialize an empty public key" );
-
-   compressed_public_key cpk;
-   size_t len = cpk.size();
-   KOINOS_ASSERT(
-      secp256k1_ec_pubkey_serialize(
-         _get_context(),
-         (unsigned char *) cpk.data(),
-         &len,
-         (const secp256k1_pubkey*) _key.data(),
-         SECP256K1_EC_COMPRESSED ),
-      key_serialization_error, "Unknown error during public key serialization" );
-   KOINOS_ASSERT( len == cpk.size(), key_serialization_error,
-      "Serialized key does not match expected size of ${n} bytes", ("n", cpk.size()) );
-
-   return cpk;
+   return _my->serialize();
 }
 
 public_key public_key::deserialize( const compressed_public_key& cpk )
@@ -109,7 +202,7 @@ public_key public_key::deserialize( const compressed_public_key& cpk )
    KOINOS_ASSERT(
       secp256k1_ec_pubkey_parse(
          _get_context(),
-         (secp256k1_pubkey*) pk._key.data(),
+         (secp256k1_pubkey*) pk._my->_key.data(),
          (const unsigned char*) cpk.data(),
          cpk.size() ),
       key_serialization_error, "Unknown serror during public key deserialization" );
@@ -141,7 +234,7 @@ public_key public_key::recover( const recoverable_signature& sig, const multihas
    KOINOS_ASSERT(
       secp256k1_ecdsa_recover(
          _get_context(),
-         (secp256k1_pubkey*) pk._key.data(),
+         (secp256k1_pubkey*) pk._my->_key.data(),
          (const secp256k1_ecdsa_recoverable_signature*) internal_sig.data(),
          (unsigned char*) hash.digest.data() ),
       key_recovery_error, "Unknown error recovering public key from signature" );
@@ -149,62 +242,38 @@ public_key public_key::recover( const recoverable_signature& sig, const multihas
    return pk;
 }
 
-public_key public_key::add( const multihash& hash )const
+public_key public_key::add( const multihash& offset ) const
 {
-   KOINOS_ASSERT( hash.digest.size() == 32, key_manipulation_error, "Digest must be 32 bytes" );
-   KOINOS_ASSERT( _key != empty_pub(), key_manipulation_error, "Cannot add to an empty key" );
-   public_key new_key( *this );
-   KOINOS_ASSERT(
-      secp256k1_ec_pubkey_tweak_add(
-         _get_context(),
-         (secp256k1_pubkey*) new_key._key.data(),
-         (unsigned char*) hash.digest.data() ),
-      key_manipulation_error, "Unknown error when adding to public key" );
-   return new_key;
+   public_key pk;
+   pk._my = std::make_unique< detail::public_key_impl >( std::move( _my->add( offset ) ) );
+   return std::move( pk );
+}
+
+bool public_key::valid() const
+{
+   return _my->valid();
 }
 
 public_key& public_key::operator=( const public_key& pk )
 {
-   _key = pk._key;
+   _my = std::make_unique< detail::public_key_impl >( *pk._my );
    return *this;
 }
 
 public_key& public_key::operator=( public_key&& pk )
 {
-   _key = std::move( pk._key );
+   _my = std::move( pk._my );
    return *this;
 }
 
-bool public_key::valid()const
+bool operator ==( const public_key& a, const public_key& b )
 {
-   return _key != empty_pub();
+   return *a._my == *b._my;
 }
-
-unsigned int public_key::fingerprint() const
-{
-   multihash sha256 = hash_str( CRYPTO_SHA2_256_ID, _key.data(), _key.size() );
-   multihash ripemd160 = hash_str( CRYPTO_RIPEMD160_ID, sha256.digest.data(), sha256.digest.size() );
-   unsigned char* fp = (unsigned char*) ripemd160.digest.data();
-   return (fp[0] << 24) | (fp[1] << 16) | (fp[2] << 8) | fp[3];
-}
-
-bool public_key::is_canonical( const recoverable_signature& c )
-{
-   using boost::multiprecision::uint256_t;
-   constexpr uint256_t n_2 =
-      0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0_cppui256;
-
-   // BIP-0062 states that sig must be in [1,n/2], however because a sig of value 0 is an invalid
-   // signature under all circumstances, the lower bound does not need checking
-   return std::memcmp( c.data() + 33, &n_2, 32 ) <= 0;
-}
-
 
 std::string public_key::to_base58() const
 {
-   KOINOS_ASSERT( _key != empty_pub(), key_serialization_error, "Cannot serialize an empty key" );
-   compressed_public_key cpk = serialize();
-   return to_base58( cpk );
+   return _my->to_base58();
 }
 
 std::string public_key::to_base58( const compressed_public_key &key )
@@ -232,20 +301,25 @@ public_key public_key::from_base58( const std::string& b58 )
    return deserialize( key );
 }
 
-std::string public_key::to_address( uint8_t prefix )const
+std::string public_key::to_address( uint8_t prefix ) const
 {
-   auto compressed_key = serialize();
-   auto sha256 = hash_str( CRYPTO_SHA2_256_ID, compressed_key.data(), compressed_key.size() );
-   auto ripemd160 = hash_str( CRYPTO_RIPEMD160_ID, sha256.digest.data(), sha256.digest.size() );
-   fixed_blob< 25 > d;
-   d[0] = prefix;
-   std::memcpy( d.data() + 1, ripemd160.digest.data(), ripemd160.digest.size() );
-   sha256 = hash_str( CRYPTO_SHA2_256_ID, d.data(), ripemd160.digest.size() + 1 );
-   sha256 = hash_str( CRYPTO_SHA2_256_ID, sha256.digest.data(), sha256.digest.size() );
-   std::memcpy( d.data() + ripemd160.digest.size() + 1, sha256.digest.data(), 4 );
-   std::string b58;
-   koinos::pack::util::encode_base58( b58, d );
-   return b58;
+   return _my->to_address( prefix );
+}
+
+unsigned int public_key::fingerprint() const
+{
+   return _my->fingerprint();
+}
+
+bool public_key::is_canonical( const recoverable_signature& c )
+{
+   using boost::multiprecision::uint256_t;
+   constexpr uint256_t n_2 =
+      0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0_cppui256;
+
+   // BIP-0062 states that sig must be in [1,n/2], however because a sig of value 0 is an invalid
+   // signature under all circumstances, the lower bound does not need checking
+   return std::memcmp( c.data() + 33, &n_2, 32 ) <= 0;
 }
 
 private_key::private_key() { _init_lib(); }
@@ -346,7 +420,7 @@ public_key private_key::get_public_key()const
    KOINOS_ASSERT(
       secp256k1_ec_pubkey_create(
          _get_context(),
-         (secp256k1_pubkey*) pk._key.data(),
+         (secp256k1_pubkey*) pk._my->_key.data(),
          (unsigned char*) _key.data() ),
       key_manipulation_error, "Unknown error creating public key from a private key" );
    return pk;
