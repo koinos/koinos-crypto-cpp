@@ -77,6 +77,21 @@ struct encoder
       uint64_t _code, _size;
 };
 
+template< typename T, typename... Types >
+inline multihash hash_n( uint64_t code, T&& t, Types&&... rest )
+{
+   multihash result;
+   encoder e( code );
+
+   variable_blob vb;
+   koinos::pack::to_variable_blob( vb, std::forward< T >( t ) );
+   koinos::pack::to_variable_blob( vb, std::forward< Types... >( rest... ), true );
+
+   koinos::pack::to_binary( e, vb );
+   e.get_result( result );
+   return result;
+}
+
 template< typename T >
 inline multihash hash( uint64_t code, const T& t, uint64_t size = 0 )
 {
