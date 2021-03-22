@@ -216,14 +216,16 @@ BOOST_AUTO_TEST_CASE( merkle )
 BOOST_AUTO_TEST_CASE( hash_n_test )
 {
    std::string obj1 = "abcdefghijklmnopqrstuvwxyz";
-   std::string obj2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+   uint32_t obj2 = 10;
+   koinos::block_height_type obj3( 20 );
 
    koinos::variable_blob vb;
    koinos::pack::to_variable_blob( vb, obj1 );
    koinos::pack::to_variable_blob( vb, obj2, true );
+   koinos::pack::to_variable_blob( vb, obj3, true );
 
    koinos::multihash hash_result   = koinos::crypto::hash( CRYPTO_SHA2_256_ID, vb );
-   koinos::multihash hash_n_result = koinos::crypto::hash_n( CRYPTO_SHA2_256_ID, obj1, obj2 );
+   koinos::multihash hash_n_result = koinos::crypto::hash_n( CRYPTO_SHA2_256_ID, obj1, obj2, obj3 );
 
    BOOST_CHECK_EQUAL( hash_result.id, hash_n_result.id );
    BOOST_CHECK_EQUAL( hex_string( hash_result.digest ), hex_string( hash_n_result.digest ) );
