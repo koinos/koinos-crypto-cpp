@@ -21,6 +21,21 @@ KOINOS_DECLARE_EXCEPTION( multihash_size_mismatch );
 KOINOS_DECLARE_EXCEPTION( multihash_size_limit_exceeded );
 KOINOS_DECLARE_EXCEPTION( multihash_vector_mismatch );
 
+namespace detail {
+   template< typename T >
+   void pack_variadic_types( variable_blob& vb, T&& t )
+   {
+      pack::to_variable_blob( vb, std::forward< T >( t ), true );
+   }
+
+   template< typename T, typename... Ts >
+   void pack_variadic_types( variable_blob& vb, T&& t, Ts&&... ts )
+   {
+      pack::to_variable_blob( vb, std::forward< T >( t ), true );
+      pack_variadic_types( vb,std::forward< Ts >( ts )... );
+   }
+}
+
 inline bool multihash_is_zero( const multihash& mh )
 {
    return std::all_of( mh.digest.begin(), mh.digest.end(), []( char c ) { return (c == 0); } );
@@ -77,15 +92,14 @@ struct encoder
       uint64_t _code, _size;
 };
 
-template< typename T, typename... Types >
-inline multihash hash_n( uint64_t code, T&& t, Types&&... rest )
+template< typename... Types >
+inline multihash hash_n( uint64_t code, Types&&... vars )
 {
    multihash result;
    encoder e( code );
 
    variable_blob vb;
-   koinos::pack::to_variable_blob( vb, std::forward< T >( t ) );
-   koinos::pack::to_variable_blob( vb, std::forward< Types... >( rest... ), true );
+   detail::pack_variadic_types( vb, std::forward< Types >( vars )... );
 
    koinos::pack::to_binary( e, vb );
    e.get_result( result );
