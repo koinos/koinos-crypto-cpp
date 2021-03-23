@@ -133,39 +133,6 @@ multihash zero_hash_like( const multihash& old )
    return zero_hash( old.id, old.digest.size() );
 }
 
-multihash_vector to_multihash_vector( const std::vector< multihash >& mh_in )
-{
-   multihash_vector mhv_out;
-   const size_t n = mh_in.size();
-   KOINOS_ASSERT( n > 0, multihash_size_mismatch, "Input vector cannot be empty" );
-
-   mhv_out.digests.resize( n );
-   mhv_out.id = mh_in[0].id;
-
-   for ( size_t i = 0; i<n; i++ )
-   {
-      mhv_out.digests[i] = mh_in[i].digest;
-      KOINOS_ASSERT( mh_in[i].id == mhv_out.id,
-         multihash_vector_mismatch,
-         "Heterogenous multihash_vector, expected hash_id == ${h_out}, got hash_id == ${h_in}",
-         ("h_out", mhv_out.id)("h_in", mh_in[i].id) );
-   }
-   return mhv_out;
-}
-
-std::vector< multihash > from_multihash_vector( const multihash_vector& mhv_in )
-{
-   std::vector< multihash > mh_out;
-   const size_t n = mhv_in.digests.size();
-   mh_out.resize( n );
-   for ( size_t i = 0; i < n; i++ )
-   {
-      mh_out[i].id = mhv_in.id;
-      mh_out[i].digest = mhv_in.digests[i];
-   }
-   return mh_out;
-}
-
 void merkle_hash_leaves( std::vector< multihash >& hashes, uint64_t code, uint64_t size )
 {
    size_t n_hashes = hashes.size();
