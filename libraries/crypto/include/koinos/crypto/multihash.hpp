@@ -19,7 +19,6 @@ namespace koinos::crypto {
 KOINOS_DECLARE_EXCEPTION( unknown_hash_algorithm );
 KOINOS_DECLARE_EXCEPTION( multihash_size_mismatch );
 KOINOS_DECLARE_EXCEPTION( multihash_size_limit_exceeded );
-KOINOS_DECLARE_EXCEPTION( multihash_vector_mismatch );
 
 namespace detail {
    template< typename T >
@@ -133,9 +132,6 @@ multihash zero_hash_like( const multihash& old );
 
 multihash empty_hash( uint64_t code, uint64_t size = 0 );
 multihash empty_hash_like( const multihash& old );
-
-multihash_vector to_multihash_vector( const std::vector< multihash >& mh_in );
-std::vector< multihash > from_multihash_vector( const multihash_vector& mhv_in );
 
 multihash merkle_hash( uint64_t code, const std::vector< variable_blob >& values, uint64_t size = 0 );
 multihash merkle_hash_like( const multihash& old, const std::vector< variable_blob >& values );
