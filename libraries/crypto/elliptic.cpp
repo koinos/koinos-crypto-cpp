@@ -166,7 +166,7 @@ namespace detail {
       sha256 = hash_str( CRYPTO_SHA2_256_ID, sha256.digest.data(), sha256.digest.size() );
       std::memcpy( d.data() + ripemd160.digest.size() + 1, sha256.digest.data(), 4 );
       std::string b58;
-      koinos::pack::util::encode_base58( b58, d );
+      pack::util::impl::encode_base58( b58, d );
       return b58;
    }
 
@@ -284,14 +284,14 @@ std::string public_key::to_base58( const compressed_public_key &key )
    std::memcpy( d.data(), key.data(), key.size() );
    std::memcpy( d.begin() + key.size(), (const char*)&check, sizeof(check) );
    std::string b58;
-   koinos::pack::util::encode_base58( b58, d );
+   pack::util::impl::encode_base58( b58, d );
    return b58;
 }
 
 public_key public_key::from_base58( const std::string& b58 )
 {
    fixed_blob< 37 > d;
-   KOINOS_ASSERT( koinos::pack::util::decode_base58( b58, d ),
+   KOINOS_ASSERT( pack::util::impl::decode_base58( b58, d ),
       key_serialization_error, "Base58 string is not the correct size for a 37 byte key" );
    compressed_public_key key;
    uint32_t check = *((uint32_t*)hash_str( CRYPTO_SHA2_256_ID, d.data(), key.size() ).digest.data());
@@ -437,14 +437,14 @@ std::string private_key::to_wif( uint8_t prefix )
    check = *((uint32_t*)hash_str( CRYPTO_SHA2_256_ID, extended_hash.digest.data(), extended_hash.digest.size() ).digest.data());
    std::memcpy( d.data() + _key.size() + 1, (const char*)&check, sizeof(check)  );
    std::string b58;
-   koinos::pack::util::encode_base58( b58, d );
+   pack::util::impl::encode_base58( b58, d );
    return b58;
 }
 
 private_key private_key::from_wif( const std::string& b58, uint8_t prefix )
 {
    fixed_blob< 37 > d;
-   KOINOS_ASSERT( koinos::pack::util::decode_base58( b58, d ),
+   KOINOS_ASSERT( pack::util::impl::decode_base58( b58, d ),
       key_serialization_error, "Base58 string is not the correct size for a private key WIF" );
    KOINOS_ASSERT( (uint8_t)d[0] == prefix, key_serialization_error, "Incorrect WIF prefix" );
    private_key key;
