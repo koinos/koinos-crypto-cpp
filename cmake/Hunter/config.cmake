@@ -26,8 +26,8 @@ hunter_config(koinos_log
 )
 
 hunter_config(koinos_types
-   URL  "https://github.com/koinos/koinos-types/archive/f5acb11afb80310949d3122dbf39642f8982ad8d.tar.gz"
-   SHA1 "77003d4aaa1f5bc3dc6143a2fbdee28a24c031c2"
+   URL  "https://github.com/koinos/koinos-types/archive/4c63adec26d12aefd4922a41fd8033af5694d816.tar.gz"
+   SHA1 "05eff0cc17fc2fd07c6b531b5dce6a8dbc6570a7"
    CMAKE_ARGS
       BUILD_TESTS=OFF
 )
