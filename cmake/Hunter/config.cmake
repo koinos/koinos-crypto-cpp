@@ -32,7 +32,13 @@ hunter_config(koinos_types
       BUILD_TESTS=OFF
 )
 
+hunter_config(koinos_proto
+   URL  "https://github.com/koinos/koinos-proto-cpp/archive/5f4d02eab1d487db64885e3949f09f090f3e8818.tar.gz"
+   SHA1 "fcccb905a46d3ee8f21958e77f27691aebb711cd"
+)
+
 hunter_config(libsecp256k1
    URL "https://github.com/soramitsu/soramitsu-libsecp256k1/archive/c7630e1bac638c0f16ee66d4dce7b5c49eecbaa5.tar.gz"
    SHA1 "0534fa8948f279b26fd102905215a56f0ad7fa18"
 )
+
