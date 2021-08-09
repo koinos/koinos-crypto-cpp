@@ -33,8 +33,8 @@ hunter_config(koinos_types
 )
 
 hunter_config(koinos_proto
-   URL  "https://github.com/koinos/koinos-proto-cpp/archive/5b9378314c7d00139247783ee0f29e3fdce67d1b.tar.gz"
-   SHA1 6b98ed4b8568c95b555b89e7d11a14c9850b61c8
+   URL  "https://github.com/koinos/koinos-proto-cpp/archive/88124ddca9ad4988dec361f43c91cab83d9611eb.tar.gz"
+   SHA1 "e42dd458c99a898827822cc21b74812f2eb120c3"
 )
 
 hunter_config(libsecp256k1
@@ -45,6 +45,6 @@ hunter_config(libsecp256k1
 hunter_config(CapnProto
    VERSION "0.8.0"
    URL "https://capnproto.org/capnproto-c++-0.8.0.tar.gz"
-   SHA1 fbc1c65b32748029f1a09783d3ebe9d496d5fcc4
+   SHA1 "fbc1c65b32748029f1a09783d3ebe9d496d5fcc4"
 )
 
