@@ -6,6 +6,8 @@
 
 #include <openssl/evp.h>
 
+#include <koinos/proto/common.capnp.h>
+
 /* Multicodec IDs for hash algorithms
  * https://github.com/multiformats/multicodec/blob/master/table.csv
  */
