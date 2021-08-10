@@ -1,12 +1,13 @@
 #pragma once
-#include <koinos/pack/rt/basetypes.hpp>
+
+#include <koinos/crypto/multihash.hpp>
 #include <koinos/exception.hpp>
 
 namespace koinos::crypto {
 
-   using recoverable_signature = fixed_blob< 65 >;                         ///< A 65 byte recoverable ECDSA siganture
-   using compressed_public_key = fixed_blob< 33 >;                         ///< The 33 byte compressed ECDSA public key
-   using private_key_secret    = fixed_blob< 32 >;                         ///< The 32 byte ECDSA prvate key secret
+   using recoverable_signature = std::array< std::byte, 65 >; ///< A 65 byte recoverable ECDSA siganture
+   using compressed_public_key = std::array< std::byte, 33 >; ///< The 33 byte compressed ECDSA public key
+   using private_key_secret    = std::array< std::byte, 32 >; ///< The 32 byte ECDSA prvate key secret
 
    KOINOS_DECLARE_EXCEPTION( key_serialization_error );
    KOINOS_DECLARE_EXCEPTION( key_recovery_error );
@@ -70,7 +71,7 @@ namespace koinos::crypto {
          static std::string to_base58( const compressed_public_key &key );
          static public_key from_base58( const std::string& b58 );
 
-         std::string to_address( uint8_t prefix = 0x00 ) const;
+         std::string to_address( std::byte prefix = std::byte{ 0x00 } ) const;
 
          unsigned int fingerprint() const;
 
@@ -133,8 +134,8 @@ namespace koinos::crypto {
 
          unsigned int fingerprint() const { return get_public_key().fingerprint(); }
 
-         std::string to_wif( uint8_t prefix = 0x80 );
-         static private_key from_wif( const std::string& b58, uint8_t prefix = 0x80 );
+         std::string to_wif( std::byte prefix = std::byte{ 0x80 } );
+         static private_key from_wif( const std::string& b58, std::byte prefix = std::byte{ 0x80 } );
 
       private:
          private_key_secret _key;

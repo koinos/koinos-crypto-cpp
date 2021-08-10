@@ -9,20 +9,72 @@
 
 namespace koinos::crypto {
 
-const EVP_MD* get_evp_md( uint64_t code )
+multihash::multihash( multicodec code, digest_type digest ) : _code( code ), _digest( digest ) {}
+
+multicodec multihash::code() const
 {
-   static const std::map<uint64_t, const EVP_MD*> evp_md_map = {
-      { CRYPTO_SHA1_ID, EVP_sha1() },
-      { CRYPTO_SHA2_256_ID, EVP_sha256() },
-      { CRYPTO_SHA2_512_ID, EVP_sha512() },
-      { CRYPTO_RIPEMD160_ID, EVP_ripemd160() }
+   return _code;
+}
+
+const multihash::digest_type& multihash::digest() const
+{
+   return _digest;
+}
+
+std::size_t multihash::standard_size( multicodec id )
+{
+   switch( id )
+   {
+      case multicodec::sha1:
+         return 20;
+      case multicodec::sha2_256:
+         return 32;
+      case multicodec::sha2_512:
+         return 64;
+      case multicodec::ripemd_160:
+         return 20;
+      default:
+         KOINOS_ASSERT( false, unknown_hash_algorithm, "unknown hash code ${i}", ("i", static_cast< std::underlying_type_t< multicodec > >( id )) );
+   }
+}
+
+multihash multihash::zero( multicodec code, std::size_t size )
+{
+   multihash::digest_type result;
+
+   if ( !size )
+      size = multihash::standard_size( code );
+
+   result.resize( size );
+   std::memset( result.data(), 0, size );
+   return multihash( code, result );
+}
+
+multihash multihash::empty( multicodec code, std::size_t size )
+{
+   char c;
+   return hash_str( code, &c, 0, size );
+}
+
+bool multihash::is_zero() const
+{
+   return std::all_of( _digest.begin(), _digest.end(), []( std::byte b ) { return b == std::byte{ 0x00 }; } );
+}
+
+const EVP_MD* get_evp_md( multicodec code )
+{
+   static const std::map< multicodec, const EVP_MD* > evp_md_map = {
+      { multicodec::sha1      , EVP_sha1()      },
+      { multicodec::sha2_256  , EVP_sha256()    },
+      { multicodec::sha2_512  , EVP_sha512()    },
+      { multicodec::ripemd_160, EVP_ripemd160() }
    };
 
    auto md_itr = evp_md_map.find( code );
    return md_itr != evp_md_map.end() ? md_itr->second : nullptr;
 }
 
-encoder::encoder( uint64_t code, uint64_t size )
+encoder::encoder( multicodec code, std::size_t size )
 {
    static const uint64_t MAX_HASH_SIZE = std::min< uint64_t >(
       {std::numeric_limits< uint8_t >::max(),              // We potentially store the size in uint8_t value
@@ -31,22 +83,28 @@ encoder::encoder( uint64_t code, uint64_t size )
       });
 
    _code = code;
-   if( size == 0 )
-      size = multihash_standard_size( code );
-   KOINOS_ASSERT( size <= MAX_HASH_SIZE, multihash_size_limit_exceeded,
-      "Requested hash size ${size} is larger than max size ${max}", ("size", size)("max", MAX_HASH_SIZE) );
+
+   if ( size == 0 )
+      size = multihash::standard_size( code );
+
+   KOINOS_ASSERT(
+      size <= MAX_HASH_SIZE,
+      multihash_size_limit_exceeded,
+      "requested hash size ${size} is larger than max size ${max}", ("size", size)("max", MAX_HASH_SIZE)
+   );
 
    _size = size;
    OpenSSL_add_all_digests();
    md = get_evp_md( code );
-   KOINOS_ASSERT( md, unknown_hash_algorithm, "Unknown hash id ${i}", ("i", code) );
+   KOINOS_ASSERT( md, unknown_hash_algorithm, "unknown hash id ${i}", ("i", static_cast< std::underlying_type_t< multicodec > >( code )) );
    mdctx = EVP_MD_CTX_create();
    EVP_DigestInit_ex( mdctx, md, NULL );
 }
 
 encoder::~encoder()
 {
-   if( mdctx ) EVP_MD_CTX_destroy( mdctx );
+   if ( mdctx )
+      EVP_MD_CTX_destroy( mdctx );
 }
 
 void encoder::write( const char* d, size_t len )
@@ -56,144 +114,42 @@ void encoder::write( const char* d, size_t len )
 
 void encoder::reset()
 {
-   if( mdctx ) EVP_MD_CTX_destroy( mdctx );
-   if( md )
+   if( mdctx )
+      EVP_MD_CTX_destroy( mdctx );
+
+   if ( md )
    {
       mdctx = EVP_MD_CTX_create();
       EVP_DigestInit_ex( mdctx, md, NULL );
    }
 }
 
-void encoder::get_result( variable_blob& v )
+void encoder::get_result( std::vector< std::byte >& v )
 {
    unsigned int size = (unsigned int) _size;
    v.resize( _size );
+
    KOINOS_ASSERT(
-      EVP_DigestFinal_ex(
-         mdctx, (unsigned char*)( v.data() ), &size ),
-      koinos::exception, "EVP_DigestFinal_ex returned failure" );
-   KOINOS_ASSERT( size == _size,
+      EVP_DigestFinal_ex( mdctx, (unsigned char*)( v.data() ), &size ),
+      koinos::exception, "EVP_DigestFinal_ex returned failure"
+   );
+
+   KOINOS_ASSERT(
+      size == _size,
       multihash_size_mismatch,
       "OpenSSL EVP_DigestFinal_ex returned hash size ${size}, does not match expected hash size ${_size}",
-      ("size", size)("_size", _size) );
+      ("size", size)("_size", _size)
+   );
 }
 
-multihash hash_str( uint64_t code, const char* data, size_t len, uint64_t size )
+
+multihash hash_str( multicodec code, const char* data, size_t len, uint64_t size )
 {
-   multihash result;
+   multihash::digest_type result;
    encoder e( code, size );
    e.write( data, len );
    e.get_result( result );
-   return result;
-}
-
-
-multihash hash_str_like( const multihash& old, const char* data, size_t len )
-{
-   return hash_str( old.id, data, len, old.digest.size() );
-}
-
-multihash hash_blob( uint64_t code, const variable_blob& value, uint64_t size )
-{
-   return hash_str( code, value.data(), value.size(), size );
-}
-
-multihash hash_blob_like( const multihash& old, const variable_blob& value )
-{
-   return hash_str( old.id, value.data(), value.size(), old.digest.size() );
-}
-
-multihash empty_hash( uint64_t code, uint64_t size )
-{
-   char c;
-   return hash_str( code, &c, 0, size );
-}
-
-multihash empty_hash_like( const multihash& old )
-{
-   char c;
-   return hash_str( old.id, &c, 0, old.digest.size() );
-}
-
-multihash zero_hash( uint64_t code, uint64_t size )
-{
-   multihash result;
-   result.id = code;
-
-   if ( !size )
-      size = multihash_standard_size( code );
-
-   result.digest.resize( size );
-   std::memset( result.digest.data(), 0, size );
-   return result;
-}
-
-multihash zero_hash_like( const multihash& old )
-{
-   return zero_hash( old.id, old.digest.size() );
-}
-
-void merkle_hash_leaves( std::vector< multihash >& hashes, uint64_t code, uint64_t size )
-{
-   size_t n_hashes = hashes.size();
-   if ( n_hashes == 0 )
-   {
-      hashes.resize(1);
-      // Corner case:  Merkle root of empty sequence is H("")
-      hashes[0] = empty_hash( code, size );
-      return;
-   }
-
-   encoder enc( code, size );
-   while ( n_hashes > 1 )
-   {
-      size_t num_pairs = n_hashes >> 1;
-      for( size_t i = 0; i < num_pairs; i++ )
-      {
-         enc.reset();
-         enc.write( hashes[i*2  ].digest.data(), hashes[i*2  ].digest.size() );
-         enc.write( hashes[i*2+1].digest.data(), hashes[i*2+1].digest.size() );
-         enc.get_result( hashes[i] );
-      }
-      if( ( n_hashes & 1 ) != 0 )
-      {
-         hashes[num_pairs] = hashes[n_hashes-1];
-         n_hashes = num_pairs+1;
-      }
-      else
-      {
-         n_hashes = num_pairs;
-      }
-   }
-}
-
-void merkle_hash_leaves_like( std::vector< multihash >& hashes, const multihash& old )
-{
-   merkle_hash_leaves( hashes, old.id, old.digest.size() );
-}
-
-multihash merkle_hash( uint64_t code, const std::vector< variable_blob >& values, uint64_t size )
-{
-   std::size_t n_hashes = values.size();
-   if ( n_hashes == 0 )
-   {
-      // Corner case:  Merkle root of empty sequence is H("")
-      return crypto::empty_hash( code, size );
-   }
-
-   std::vector< multihash > hashes( n_hashes );
-   for ( size_t i = 0; i < n_hashes; i++ )
-   {
-      hashes[i] = crypto::hash_str( code, values[i].data(), values[i].size(), size );
-   }
-
-   merkle_hash_leaves( hashes, code, size );
-   return hashes[0];
-}
-
-multihash merkle_hash_like( const multihash& old, const std::vector< variable_blob >& values )
-{
-   return merkle_hash( old.id, values, old.digest.size() );
+   return multihash( code, result );
 }
 
 } // koinos::crypto

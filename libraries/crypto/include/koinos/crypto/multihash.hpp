@@ -1,20 +1,10 @@
 #pragma once
-#include <koinos/exception.hpp>
 
-#include <koinos/pack/rt/basetypes.hpp>
-#include <koinos/pack/rt/binary.hpp>
+#include <cstddef>
 
 #include <openssl/evp.h>
 
-#include <koinos/proto/common.capnp.h>
-
-/* Multicodec IDs for hash algorithms
- * https://github.com/multiformats/multicodec/blob/master/table.csv
- */
-#define CRYPTO_SHA1_ID        uint64_t(0x11)
-#define CRYPTO_SHA2_256_ID    uint64_t(0x12)
-#define CRYPTO_SHA2_512_ID    uint64_t(0x13)
-#define CRYPTO_RIPEMD160_ID   uint64_t(0x1053)
+#include <koinos/exception.hpp>
 
 namespace koinos::crypto {
 
@@ -22,128 +12,125 @@ KOINOS_DECLARE_EXCEPTION( unknown_hash_algorithm );
 KOINOS_DECLARE_EXCEPTION( multihash_size_mismatch );
 KOINOS_DECLARE_EXCEPTION( multihash_size_limit_exceeded );
 
-namespace detail {
-   template< typename T >
-   void pack_variadic_types( variable_blob& vb, T&& t )
-   {
-      pack::to_variable_blob( vb, std::forward< T >( t ), true );
-   }
-
-   template< typename T, typename... Ts >
-   void pack_variadic_types( variable_blob& vb, T&& t, Ts&&... ts )
-   {
-      pack::to_variable_blob( vb, std::forward< T >( t ), true );
-      pack_variadic_types( vb,std::forward< Ts >( ts )... );
-   }
-}
-
-inline bool multihash_is_zero( const multihash& mh )
+/*
+ * Multicodec IDs for hash algorithms
+ * https://github.com/multiformats/multicodec/blob/master/table.csv
+ */
+enum class multicodec : std::uint64_t
 {
-   return std::all_of( mh.digest.begin(), mh.digest.end(), []( char c ) { return (c == 0); } );
-}
+   identity   = 0x00,
+   sha1       = 0x11,
+   sha2_256   = 0x12,
+   sha2_512   = 0x13,
+   ripemd_160 = 0x1053
+};
 
-inline uint64_t multihash_standard_size( uint64_t id )
-{
-   switch( id )
-   {
-      case CRYPTO_SHA1_ID:
-         return 20;
-      case CRYPTO_SHA2_256_ID:
-         return 32;
-      case CRYPTO_SHA2_512_ID:
-         return 64;
-      case CRYPTO_RIPEMD160_ID:
-         return 20;
-      default:
-         KOINOS_ASSERT( false, unknown_hash_algorithm, "Unknown hash id ${i}", ("i", id) );
-   }
-}
+struct encoder;
 
-constexpr bool multihash_id_is_known( uint64_t id )
+class multihash
 {
-   switch ( id )
-   {
-      case CRYPTO_SHA1_ID:
-      case CRYPTO_SHA2_256_ID:
-      case CRYPTO_SHA2_512_ID:
-      case CRYPTO_RIPEMD160_ID:
-         return true;
-   }
-   return false;
-}
+public:
+   using digest_type = std::vector< std::byte >;
+   friend struct encoder;
+
+   multihash() = default;
+   multihash( multicodec code, digest_type digest );
+
+   multicodec           code() const;
+   const digest_type&   digest() const;
+   bool                 is_zero() const;
+
+   static std::size_t   standard_size( multicodec id );
+   static multihash     zero( multicodec id, std::size_t size = 0 );
+   static multihash     empty( multicodec id, std::size_t size = 0 );
+
+private:
+   multicodec               _code = multicodec::identity;
+   std::vector< std::byte > _digest;
+};
+
+//inline bool multihash_is_zero( const multihash& mh )
+//{
+//   return std::all_of( mh.digest.begin(), mh.digest.end(), []( char c ) { return (c == 0); } );
+//}
+//
+//inline uint64_t multihash_standard_size( uint64_t id )
+//{
+//   switch( id )
+//   {
+//      case CRYPTO_SHA1_ID:
+//         return 20;
+//      case CRYPTO_SHA2_256_ID:
+//         return 32;
+//      case CRYPTO_SHA2_512_ID:
+//         return 64;
+//      case CRYPTO_RIPEMD160_ID:
+//         return 20;
+//      default:
+//         KOINOS_ASSERT( false, unknown_hash_algorithm, "Unknown hash id ${i}", ("i", id) );
+//   }
+//}
+
+//constexpr bool multihash_id_is_known( uint64_t id )
+//{
+//   switch ( id )
+//   {
+//      case CRYPTO_SHA1_ID:
+//      case CRYPTO_SHA2_256_ID:
+//      case CRYPTO_SHA2_512_ID:
+//      case CRYPTO_RIPEMD160_ID:
+//         return true;
+//   }
+//   return false;
+//}
 
 struct encoder
 {
-   encoder( uint64_t code, uint64_t size = 0 );
+   encoder( multicodec code, std::size_t size = 0 );
    ~encoder();
 
    void write( const char* d, size_t len );
    void put( char c ) { write( &c, 1 ); }
    void reset();
-   void get_result( variable_blob& v );
+   void get_result( std::vector< std::byte >& v );
    inline void get_result( multihash& mh )
    {
-      get_result( mh.digest );
-      mh.id = _code;
+      get_result( mh._digest );
+      mh._code = _code;
    }
 
    private:
       const EVP_MD* md = nullptr;
       EVP_MD_CTX* mdctx = nullptr;
-      uint64_t _code, _size;
+      multicodec _code;
+      std::size_t _size;
 };
 
 template< typename... Types >
-inline multihash hash_n( uint64_t code, Types&&... vars )
+inline multihash hash_n( multicodec code, Types&&... vars )
 {
-   multihash result;
+   multihash::digest_type result;
    encoder e( code );
 
-   variable_blob vb;
-   detail::pack_variadic_types( vb, std::forward< Types >( vars )... );
+//   variable_blob vb;
+//   detail::pack_variadic_types( vb, std::forward< Types >( vars )... );
 
-   koinos::pack::to_binary( e, vb );
+//   koinos::pack::to_binary( e, vb );
    e.get_result( result );
-   return result;
+   return multihash( code, result );
 }
 
 template< typename T >
-inline multihash hash( uint64_t code, const T& t, uint64_t size = 0 )
+inline multihash hash( multicodec code, const T& t, std::size_t size = 0 )
 {
-   multihash result;
+   multihash::digest_type result;
    encoder e( code, size );
-   koinos::pack::to_binary( e, t );
+//   koinos::pack::to_binary( e, t );
    e.get_result( result );
-   return result;
+   return multihash( code, result );
 }
 
-template< typename T >
-multihash hash_like( const multihash& old, const T& t )
-{
-   return hash< T >( old.id, t, old.digest.size() );
-}
+multihash hash_str( multicodec code, const char* data, size_t len, uint64_t size = 0 );
 
-multihash hash_str( uint64_t code, const char* data, size_t len, uint64_t size = 0 );
-multihash hash_str_like( const multihash& old, const char* data, size_t len );
-
-multihash hash_blob( uint64_t code, const variable_blob& value, uint64_t size = 0 );
-multihash hash_blob_like( const multihash& old, const variable_blob& value );
-
-multihash zero_hash( uint64_t code, uint64_t size = 0 );
-multihash zero_hash_like( const multihash& old );
-
-multihash empty_hash( uint64_t code, uint64_t size = 0 );
-multihash empty_hash_like( const multihash& old );
-
-multihash merkle_hash( uint64_t code, const std::vector< variable_blob >& values, uint64_t size = 0 );
-multihash merkle_hash_like( const multihash& old, const std::vector< variable_blob >& values );
-
-/**
- * Compute Merkle root given leaf hash values.
- * Computation is in-place, result is stored in hashes[0].
- * Other hashes values are destroyed.
- */
-void merkle_hash_leaves( std::vector< multihash >& hashes, uint64_t code, uint64_t size = 0 );
-void merkle_hash_leaves_like( std::vector< multihash >& hashes, const multihash& old );
 
 } // koinos::crypto

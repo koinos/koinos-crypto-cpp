@@ -28,19 +28,6 @@ std::string hex_string( const Blob& b )
    return ss.str();
 }
 
-// TODO: Move this to a more general purpose header
-template< size_t N >
-bool operator ==( const fixed_blob< N >& a, const fixed_blob< N >& b )
-{
-   return std::memcmp( a.data(), b.data(), N ) == 0;
-}
-
-template< size_t N >
-bool operator !=( const fixed_blob< N >& a, const fixed_blob< N >& b )
-{
-   return !(a == b);
-}
-
 const secp256k1_context* _get_context()
 {
    static secp256k1_context* ctx = secp256k1_context_create( SECP256K1_CONTEXT_VERIFY | SECP256K1_CONTEXT_SIGN );
@@ -65,7 +52,7 @@ static int extended_nonce_function( unsigned char *nonce32, const unsigned char 
 
 namespace detail {
 
-   using public_key_data = fixed_blob< sizeof( secp256k1_pubkey ) >; ///< The full non-compressed ECDSA public key point
+   using public_key_data = std::array< std::byte, sizeof( secp256k1_pubkey ) >; ///< The full non-compressed ECDSA public key point
 
    const public_key_data& empty_pub()
    {
@@ -93,7 +80,7 @@ namespace detail {
       }
 
       std::string to_base58() const;
-      std::string to_address( uint8_t prefix ) const;
+      std::string to_address( std::byte prefix ) const;
 
       unsigned int fingerprint() const;
 
@@ -130,14 +117,14 @@ namespace detail {
 
    public_key_impl public_key_impl::add( const multihash& hash )const
    {
-      KOINOS_ASSERT( hash.digest.size() == 32, key_manipulation_error, "Digest must be 32 bytes" );
+      KOINOS_ASSERT( hash.digest().size() == 32, key_manipulation_error, "Digest must be 32 bytes" );
       KOINOS_ASSERT( _key != empty_pub(), key_manipulation_error, "Cannot add to an empty key" );
       public_key_impl new_key( *this );
       KOINOS_ASSERT(
          secp256k1_ec_pubkey_tweak_add(
             _get_context(),
             (secp256k1_pubkey*) new_key._key.data(),
-            (unsigned char*) hash.digest.data() ),
+            (unsigned char*) hash.digest().data() ),
          key_manipulation_error, "Unknown error when adding to public key" );
       return new_key;
    }
@@ -154,27 +141,25 @@ namespace detail {
       return public_key::to_base58( cpk );
    }
 
-   std::string public_key_impl::to_address( uint8_t prefix )const
+   std::string public_key_impl::to_address( std::byte prefix )const
    {
       auto compressed_key = serialize();
-      auto sha256 = hash_str( CRYPTO_SHA2_256_ID, compressed_key.data(), compressed_key.size() );
-      auto ripemd160 = hash_str( CRYPTO_RIPEMD160_ID, sha256.digest.data(), sha256.digest.size() );
-      fixed_blob< 25 > d;
+      auto sha256 = hash_str( multicodec::sha2_256, (char*)compressed_key.data(), compressed_key.size() );
+      auto ripemd160 = hash_str( multicodec::ripemd_160, (char*)sha256.digest().data(), sha256.digest().size() );
+      std::array< std::byte, 25 > d;
       d[0] = prefix;
-      std::memcpy( d.data() + 1, ripemd160.digest.data(), ripemd160.digest.size() );
-      sha256 = hash_str( CRYPTO_SHA2_256_ID, d.data(), ripemd160.digest.size() + 1 );
-      sha256 = hash_str( CRYPTO_SHA2_256_ID, sha256.digest.data(), sha256.digest.size() );
-      std::memcpy( d.data() + ripemd160.digest.size() + 1, sha256.digest.data(), 4 );
-      std::string b58;
-      pack::util::impl::encode_base58( b58, d );
-      return b58;
+      std::memcpy( d.data() + 1, ripemd160.digest().data(), ripemd160.digest().size() );
+      sha256 = hash_str( multicodec::sha2_256, (char*)d.data(), ripemd160.digest().size() + 1 );
+      sha256 = hash_str( multicodec::sha2_256, (char*)sha256.digest().data(), sha256.digest().size() );
+      std::memcpy( d.data() + ripemd160.digest().size() + 1, sha256.digest().data(), 4 );
+      return pack::util::impl::encode_base58( (unsigned char*)d.data(), (unsigned char*)d.data() + d.size() );
    }
 
    unsigned int public_key_impl::fingerprint() const
    {
-      multihash sha256 = hash_str( CRYPTO_SHA2_256_ID, _key.data(), _key.size() );
-      multihash ripemd160 = hash_str( CRYPTO_RIPEMD160_ID, sha256.digest.data(), sha256.digest.size() );
-      unsigned char* fp = (unsigned char*) ripemd160.digest.data();
+      multihash sha256 = hash_str( multicodec::sha2_256, (char*)_key.data(), _key.size() );
+      multihash ripemd160 = hash_str( multicodec::ripemd_160, (char*)sha256.digest().data(), sha256.digest().size() );
+      unsigned char* fp = (unsigned char*) ripemd160.digest().data();
       return (fp[0] << 24) | (fp[1] << 16) | (fp[2] << 8) | fp[3];
    }
 }
@@ -212,12 +197,12 @@ public_key public_key::deserialize( const compressed_public_key& cpk )
 
 public_key public_key::recover( const recoverable_signature& sig, const multihash& hash )
 {
-   KOINOS_ASSERT( hash.digest.size() == 32, key_recovery_error, "Digest must be 32 bytes" );
+   KOINOS_ASSERT( hash.digest().size() == 32, key_recovery_error, "Digest must be 32 bytes" );
    KOINOS_ASSERT( is_canonical( sig ), key_recovery_error, "Signature is not canonical" );
-   fixed_blob< 65 > internal_sig;
+   std::array< std::byte, 65 > internal_sig;
    public_key pk;
 
-   int32_t rec_id = sig[0];
+   int32_t rec_id = std::to_integer< int32_t >( sig[0] );
    KOINOS_ASSERT( 31 <= rec_id && rec_id <= 33, key_recovery_error, "Recovery ID mismatch. Must be in range [31,33]" );
 
    // The internal representation, as per the secp256k1 documentation, is an implementation
@@ -236,7 +221,7 @@ public_key public_key::recover( const recoverable_signature& sig, const multihas
          _get_context(),
          (secp256k1_pubkey*) pk._my->_key.data(),
          (const secp256k1_ecdsa_recoverable_signature*) internal_sig.data(),
-         (unsigned char*) hash.digest.data() ),
+         (unsigned char*) hash.digest().data() ),
       key_recovery_error, "Unknown error recovering public key from signature" );
 
    return pk;
@@ -278,30 +263,28 @@ std::string public_key::to_base58() const
 
 std::string public_key::to_base58( const compressed_public_key &key )
 {
-   uint32_t check = *((uint32_t*)hash_str( CRYPTO_SHA2_256_ID, key.data(), key.size() ).digest.data());
+   uint32_t check = *((uint32_t*)hash_str( multicodec::sha2_256, (char*)key.data(), key.size() ).digest().data());
    assert( key.size() + sizeof(check) == 37 );
-   fixed_blob< 37 > d;
+   std::array< std::byte, 37 > d;
    std::memcpy( d.data(), key.data(), key.size() );
    std::memcpy( d.begin() + key.size(), (const char*)&check, sizeof(check) );
-   std::string b58;
-   pack::util::impl::encode_base58( b58, d );
-   return b58;
+   return pack::util::impl::encode_base58( (unsigned char*)d.data(), (unsigned char*)d.data() + d.size() );
 }
 
 public_key public_key::from_base58( const std::string& b58 )
 {
-   fixed_blob< 37 > d;
+   std::array< char, 37 > d;
    KOINOS_ASSERT( pack::util::impl::decode_base58( b58, d ),
-      key_serialization_error, "Base58 string is not the correct size for a 37 byte key" );
+      key_serialization_error, "base58 string is not the correct size for a 37 byte key" );
    compressed_public_key key;
-   uint32_t check = *((uint32_t*)hash_str( CRYPTO_SHA2_256_ID, d.data(), key.size() ).digest.data());
+   uint32_t check = *((uint32_t*)hash_str( multicodec::sha2_256, d.data(), key.size() ).digest().data());
    KOINOS_ASSERT( std::memcmp( (char*)&check, d.data() + sizeof(key), sizeof(check) ) == 0,
-      key_serialization_error, "Invalid checksum" );
+      key_serialization_error, "invalid checksum" );
    std::memcpy( (char*)key.data(), d.data(), sizeof(key) );
    return deserialize( key );
 }
 
-std::string public_key::to_address( uint8_t prefix ) const
+std::string public_key::to_address( std::byte prefix ) const
 {
    return _my->to_address( prefix );
 }
@@ -344,9 +327,13 @@ private_key& private_key::operator=( const private_key& pk )
 
 private_key private_key::regenerate( const multihash& secret )
 {
-   KOINOS_ASSERT( secret.digest.size() == sizeof(private_key_secret), koinos::exception, "Secret must be ${s} bits", ("s", sizeof(private_key_secret)) );
+   KOINOS_ASSERT(
+      secret.digest().size() == sizeof( private_key_secret ),
+      koinos::exception,
+      "secret must be ${s} bits", ("s", sizeof( private_key_secret ))
+   );
    private_key self;
-   std::memcpy( self._key.data(), secret.digest.data(), self._key.size() );
+   std::memcpy( self._key.data(), secret.digest().data(), self._key.size() );
    return self;
 }
 
@@ -354,26 +341,28 @@ private_key private_key::generate_from_seed( const multihash& seed, const multih
 {
    // There is non-determinism in this function, perhaps purposefully.
    ssl_bignum z;
-   BN_bin2bn((unsigned char*)offset.digest.data(), offset.digest.size(), z);
+   BN_bin2bn( (unsigned char*)offset.digest().data(), offset.digest().size(), z );
 
-   ec_group group(EC_GROUP_new_by_curve_name(NID_secp256k1));
-   bn_ctx ctx(BN_CTX_new());
+   ec_group group( EC_GROUP_new_by_curve_name( NID_secp256k1 ) );
+   bn_ctx ctx( BN_CTX_new() );
    ssl_bignum order;
-   EC_GROUP_get_order(group, order, ctx);
+   EC_GROUP_get_order( group, order, ctx );
 
    // secexp = (seed + z) % order
    ssl_bignum secexp;
-   BN_bin2bn((unsigned char*)&seed, sizeof(seed), secexp);
+   BN_bin2bn( (unsigned char*)&seed, sizeof( seed ), secexp );
    BN_add(secexp, secexp, z);
    BN_mod(secexp, secexp, order, ctx);
 
-   multihash secret;
-   secret.id = CRYPTO_SHA2_256_ID;
-   secret.digest.resize( 32 );
-   assert(BN_num_bytes(secexp) <= int64_t(secret.digest.size()));
-   auto shift = secret.digest.size() - BN_num_bytes(secexp);
-   BN_bn2bin(secexp, ((unsigned char*)secret.digest.data())+shift);
-   return regenerate( secret );
+//   multihash secret;
+//   secret.id = CRYPTO_SHA2_256_ID;
+//   secret.digest.resize( 32 );
+   std::vector< std::byte > digest;
+   digest.resize( 32 );
+   assert( BN_num_bytes( secexp ) <= int64_t( digest.size() ) );
+   auto shift = digest.size() - BN_num_bytes( secexp );
+   BN_bn2bin( secexp, ( (unsigned char*)digest.data() ) + shift );
+   return regenerate( multihash( multicodec::sha2_256, digest ) );
 }
 
 private_key_secret private_key::get_secret()const
@@ -383,9 +372,9 @@ private_key_secret private_key::get_secret()const
 
 recoverable_signature private_key::sign_compact( const multihash& digest )const
 {
-   KOINOS_ASSERT( digest.digest.size() == _key.size(), koinos::exception, "Digest must be ${s} bits", ("s", _key.size()) );
-   KOINOS_ASSERT( _key != empty_priv(), signing_error, "Cannot sign with an empty key" );
-   fixed_blob< 65 > internal_sig;
+   KOINOS_ASSERT( digest.digest().size() == _key.size(), koinos::exception, "digest must be ${s} bits", ("s", _key.size()) );
+   KOINOS_ASSERT( _key != empty_priv(), signing_error, "cannot sign with an empty key" );
+   std::array< std::byte, 65 > internal_sig;
    recoverable_signature sig;
    int32_t rec_id;
    unsigned int counter = 0;
@@ -395,19 +384,19 @@ recoverable_signature private_key::sign_compact( const multihash& digest )const
          secp256k1_ecdsa_sign_recoverable(
             _get_context(),
             (secp256k1_ecdsa_recoverable_signature*) internal_sig.data(),
-            (unsigned char*) digest.digest.data(),
+            (unsigned char*) digest.digest().data(),
             (unsigned char*) _key.data(),
             extended_nonce_function,
             &counter ),
-         signing_error, "Unknown error when signing" );
+         signing_error, "unknown error when signing" );
       KOINOS_ASSERT(
          secp256k1_ecdsa_recoverable_signature_serialize_compact(
             _get_context(),
             (unsigned char*) sig.data() + 1,
             &rec_id,
             (const secp256k1_ecdsa_recoverable_signature*) internal_sig.data() ),
-         signing_error, "Unknown error when serialzing recoverable signature" );
-      sig[0] = (char)rec_id + 31;
+         signing_error, "unknown error when serialzing recoverable signature" );
+      sig[0] = static_cast< std::byte >( rec_id + 31 );
    } while( !public_key::is_canonical( sig ) );
 
    return sig;
@@ -426,32 +415,30 @@ public_key private_key::get_public_key()const
    return pk;
 }
 
-std::string private_key::to_wif( uint8_t prefix )
+std::string private_key::to_wif( std::byte prefix )
 {
-   fixed_blob< 37 > d;
+   std::array< std::byte, 37 > d;
    uint32_t check;
    assert( _key.size() + sizeof(check) + 1 == d.size() );
    d[0] = prefix;
    std::memcpy( d.data() + 1, _key.data(), _key.size() );
-   auto extended_hash = hash_str( CRYPTO_SHA2_256_ID, d.data(), _key.size() + 1 );
-   check = *((uint32_t*)hash_str( CRYPTO_SHA2_256_ID, extended_hash.digest.data(), extended_hash.digest.size() ).digest.data());
+   auto extended_hash = hash_str( multicodec::sha2_256, (char*)d.data(), _key.size() + 1 );
+   check = *((uint32_t*)hash_str( multicodec::sha2_256, (char*)extended_hash.digest().data(), extended_hash.digest().size() ).digest().data());
    std::memcpy( d.data() + _key.size() + 1, (const char*)&check, sizeof(check)  );
-   std::string b58;
-   pack::util::impl::encode_base58( b58, d );
-   return b58;
+   return pack::util::impl::encode_base58( (unsigned char*)d.data(), (unsigned char*)d.data() + d.size() );
 }
 
-private_key private_key::from_wif( const std::string& b58, uint8_t prefix )
+private_key private_key::from_wif( const std::string& b58, std::byte prefix )
 {
-   fixed_blob< 37 > d;
+   std::array< char, 37 > d;
    KOINOS_ASSERT( pack::util::impl::decode_base58( b58, d ),
-      key_serialization_error, "Base58 string is not the correct size for a private key WIF" );
-   KOINOS_ASSERT( (uint8_t)d[0] == prefix, key_serialization_error, "Incorrect WIF prefix" );
+      key_serialization_error, "base58 string is not the correct size for a private key WIF" );
+   KOINOS_ASSERT( d[0] == std::to_integer< char >( prefix ), key_serialization_error, "incorrect WIF prefix" );
    private_key key;
-   auto extended_hash = hash_str( CRYPTO_SHA2_256_ID, d.data(), key._key.size() + 1 );
-   uint32_t check = *((uint32_t*)hash_str( CRYPTO_SHA2_256_ID, extended_hash.digest.data(), extended_hash.digest.size() ).digest.data());
+   auto extended_hash = hash_str( multicodec::sha2_256, d.data(), key._key.size() + 1 );
+   uint32_t check = *((uint32_t*)hash_str( multicodec::sha2_256, (char*)extended_hash.digest().data(), extended_hash.digest().size() ).digest().data());
    KOINOS_ASSERT( std::memcmp( (char*)&check, d.data() + key._key.size() + 1, sizeof(check) ) == 0,
-      key_serialization_error, "Invlaid checksum" );
+      key_serialization_error, "invalid checksum" );
    std::memcpy( key._key.data(), d.data() + 1, key._key.size() );
    return key;
 }
