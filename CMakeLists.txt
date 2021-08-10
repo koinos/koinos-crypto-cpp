@@ -30,21 +30,10 @@ set(
 
 include("cmake/HunterGate.cmake")
 
-#HunterGate(
-#   URL "https://github.com/cpp-pm/hunter/archive/v0.23.313.tar.gz"
-#   SHA1 "6c369e5aab2749a616917df3b23511535f413604"
-#   LOCAL
-#)
-
-#HunterGate(
-#   URL "https://github.com/cpp-pm/hunter/archive/v0.23.289.tar.gz"
-#   SHA1 "7d7323704780200a1575fc089d26f8a8a393a1fa"
-#   LOCAL
-#)
 HunterGate(
-  URL "https://github.com/cpp-pm/hunter/archive/v0.23.287.tar.gz"
-  SHA1 "69371a638d697bbf09f4f08dd0aad996efcc79d9"
-  LOCAL
+   URL "https://github.com/cpp-pm/hunter/archive/v0.23.289.tar.gz"
+   SHA1 "7d7323704780200a1575fc089d26f8a8a393a1fa"
+   LOCAL
 )
 
 
