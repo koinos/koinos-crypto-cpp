@@ -214,22 +214,15 @@ BOOST_AUTO_TEST_CASE( merkle )
    auto tree = merkle_tree( multicodec::sha2_256, values );
    BOOST_CHECK_EQUAL( n012345678, hex_string( tree.root()->hash().digest() ) );
 
-   auto node = tree.root();
-   do
-   {
-      node = node->right();
-   } while ( node->value() == nullptr );
-
-   BOOST_CHECK_EQUAL( "dog", *node->value() );
-
-   node = tree.root();
-   do
-   {
-      node = node->left();
-   } while ( node->value() == nullptr );
-
-   BOOST_CHECK_EQUAL( "the", *node->value() );
-
+   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->left()->left()->value()   , "the"   );
+   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->left()->right()->value()  , "quick" );
+   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->right()->left()->value()  , "brown" );
+   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->right()->right()->value() , "fox"   );
+   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->left()->left()->value()  , "jumps" );
+   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->left()->right()->value() , "over"  );
+   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->right()->left()->value() , "a"     );
+   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->right()->right()->value(), "lazy"  );
+   BOOST_CHECK_EQUAL( *tree.root()->right()->value()                          , "dog"   );
 }
 
 BOOST_AUTO_TEST_CASE( hash_n_test )
