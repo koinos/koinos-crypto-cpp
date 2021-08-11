@@ -145,8 +145,6 @@ BOOST_AUTO_TEST_CASE( emptyhash )
 
 BOOST_AUTO_TEST_CASE( merkle )
 {
-   multihash mh;
-
    std::vector< std::string > values
    {
       "the", "quick", "brown", "fox", "jumps", "over", "a", "lazy", "dog"
@@ -182,25 +180,25 @@ BOOST_AUTO_TEST_CASE( merkle )
       BOOST_CHECK_EQUAL( wh_hex[i], hex_string( wh[i].digest() ) );
    }
 
-   const std::string n01          = "0020397085ab4494829e691c49353a04d3201fda20c6a8a6866cf0f84bb8ce47";
-   const std::string n23          = "78d4e37706320c82b2dd092eeb04b1f271523f86f910bf680ff9afcb2f8a33e1";
-   const std::string n0123        = "e07aa684d91ffcbb89952f5e99b6181f7ee7bd88bd97be1345fc508f1062c050";
-   const std::string n45          = "4185f41c5d7980ae7d14ce248f50e2854826c383671cf1ee3825ea957315c627";
-   const std::string n67          = "b2a6704395c45ad8c99247103b580f7e7a37f06c3d38075ce4b02bc34c6a6754";
-   const std::string n4567        = "2f24a249901ee8392ba0bb3b90c8efd6e2fee6530f45769199ef82d0b091d8ba";
-   const std::string n01234567    = "913b7dce068efc8db6fab0173481f137ce91352b341855a1719aaff926169987";
-   const std::string n8           = "cd6357efdd966de8c0cb2f876cc89ec74ce35f0968e11743987084bd42fb8944";
-   const std::string n012345678   = "e24e552e0b6cf8835af179a14a766fb58c23e4ee1f7c6317d57ce39cc578cfac";
+   const std::string n01        = "0020397085ab4494829e691c49353a04d3201fda20c6a8a6866cf0f84bb8ce47";
+   const std::string n23        = "78d4e37706320c82b2dd092eeb04b1f271523f86f910bf680ff9afcb2f8a33e1";
+   const std::string n0123      = "e07aa684d91ffcbb89952f5e99b6181f7ee7bd88bd97be1345fc508f1062c050";
+   const std::string n45        = "4185f41c5d7980ae7d14ce248f50e2854826c383671cf1ee3825ea957315c627";
+   const std::string n67        = "b2a6704395c45ad8c99247103b580f7e7a37f06c3d38075ce4b02bc34c6a6754";
+   const std::string n4567      = "2f24a249901ee8392ba0bb3b90c8efd6e2fee6530f45769199ef82d0b091d8ba";
+   const std::string n01234567  = "913b7dce068efc8db6fab0173481f137ce91352b341855a1719aaff926169987";
+   const std::string n8         = "cd6357efdd966de8c0cb2f876cc89ec74ce35f0968e11743987084bd42fb8944";
+   const std::string n012345678 = "e24e552e0b6cf8835af179a14a766fb58c23e4ee1f7c6317d57ce39cc578cfac";
 
-   multihash h01             = h( wh[0], wh[1] );
-   multihash h23             = h( wh[2], wh[3] );
-   multihash h0123           = h( h01, h23 );
-   multihash h45             = h( wh[4], wh[5] );
-   multihash h67             = h( wh[6], wh[7] );
-   multihash h4567           = h( h45, h67 );
-   multihash h01234567       = h( h0123, h4567 );
-   multihash h8              = wh[8];
-   multihash h012345678      = h( h01234567, h8 );
+   multihash h01        = h( wh[0], wh[1] );
+   multihash h23        = h( wh[2], wh[3] );
+   multihash h0123      = h( h01, h23 );
+   multihash h45        = h( wh[4], wh[5] );
+   multihash h67        = h( wh[6], wh[7] );
+   multihash h4567      = h( h45, h67 );
+   multihash h01234567  = h( h0123, h4567 );
+   multihash h8         = wh[8];
+   multihash h012345678 = h( h01234567, h8 );
 
    BOOST_CHECK_EQUAL( n01       , hex_string(        h01.digest() ) );
    BOOST_CHECK_EQUAL( n23       , hex_string(        h23.digest() ) );
@@ -214,15 +212,19 @@ BOOST_AUTO_TEST_CASE( merkle )
    auto tree = merkle_tree( multicodec::sha2_256, values );
    BOOST_CHECK_EQUAL( n012345678, hex_string( tree.root()->hash().digest() ) );
 
-   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->left()->left()->value()   , "the"   );
-   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->left()->right()->value()  , "quick" );
-   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->right()->left()->value()  , "brown" );
-   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->right()->right()->value() , "fox"   );
-   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->left()->left()->value()  , "jumps" );
-   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->left()->right()->value() , "over"  );
-   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->right()->left()->value() , "a"     );
-   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->right()->right()->value(), "lazy"  );
-   BOOST_CHECK_EQUAL( *tree.root()->right()->value()                          , "dog"   );
+   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->left()->left()->value()   , values[0] ); // the
+   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->left()->right()->value()  , values[1] ); // quick
+   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->right()->left()->value()  , values[2] ); // brown
+   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->right()->right()->value() , values[3] ); // fox
+   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->left()->left()->value()  , values[4] ); // jumps
+   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->left()->right()->value() , values[5] ); // over
+   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->right()->left()->value() , values[6] ); // a
+   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->right()->right()->value(), values[7] ); // lazy
+   BOOST_CHECK_EQUAL( *tree.root()->right()->value()                          , values[8] ); // dog
+
+   auto mtree = merkle_tree( multicodec::sha2_256, std::vector< std::string >() );
+   BOOST_ASSERT( mtree.root()->hash() == multihash::empty( multicodec::sha2_256 ) );
+   BOOST_ASSERT( mtree.root()->hash() != multihash::zero( multicodec::sha2_256 ) );
 }
 
 BOOST_AUTO_TEST_CASE( hash_n_test )

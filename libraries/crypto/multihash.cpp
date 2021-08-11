@@ -16,7 +16,7 @@ multicodec multihash::code() const
    return _code;
 }
 
-const multihash::digest_type& multihash::digest() const
+const digest_type& multihash::digest() const
 {
    return _digest;
 }
@@ -40,7 +40,7 @@ std::size_t multihash::standard_size( multicodec id )
 
 multihash multihash::zero( multicodec code, std::size_t size )
 {
-   multihash::digest_type result;
+   digest_type result;
 
    if ( !size )
       size = multihash::standard_size( code );
@@ -59,6 +59,16 @@ multihash multihash::empty( multicodec code, std::size_t size )
 bool multihash::is_zero() const
 {
    return std::all_of( _digest.begin(), _digest.end(), []( std::byte b ) { return b == std::byte{ 0x00 }; } );
+}
+
+bool multihash::operator==( const multihash& rhs ) const
+{
+   return _code == rhs._code && _digest == rhs._digest;
+}
+
+bool multihash::operator!=( const multihash& rhs ) const
+{
+   return !( *this == rhs );
 }
 
 const EVP_MD* get_evp_md( multicodec code )
@@ -145,7 +155,7 @@ void encoder::get_result( std::vector< std::byte >& v )
 
 multihash hash_str( multicodec code, const char* data, size_t len, uint64_t size )
 {
-   multihash::digest_type result;
+   digest_type result;
    encoder e( code, size );
    e.write( data, len );
    e.get_result( result );
