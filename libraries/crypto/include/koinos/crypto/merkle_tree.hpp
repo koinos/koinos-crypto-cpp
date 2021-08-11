@@ -10,10 +10,6 @@ namespace koinos::crypto {
 template < class T >
 class merkle_node
 {
-   std::unique_ptr< const merkle_node > _left, _right;
-   multihash                            _hash;
-   const std::shared_ptr< T >           _value;
-
 public:
    merkle_node( multicodec code ) : _left( nullptr ), _right( nullptr ), _value( nullptr )
    {
@@ -25,92 +21,87 @@ public:
       _hash = crypto::hash_str( code, (char*)value.data(), value.size() );
    }
 
-   merkle_node( multicodec code, std::unique_ptr< merkle_node< T > > left, std::unique_ptr< merkle_node< T > > right ) :
-      _left( std::move( left ) ),
-      _right( std::move( right ) ),
+   merkle_node( multicodec code, std::shared_ptr< merkle_node< T > > l, std::shared_ptr< merkle_node< T > > r ) :
+      _left( l ),
+      _right( r ),
       _value( nullptr )
    {
-      std::array< std::byte, 32 * 2 > double_digest;
-      multihash left_digest;
-      multihash right_digest;
+      multihash left = _left->hash();
+      multihash right = _right->hash();
 
-      if ( _left == nullptr && _right == nullptr )
-         throw std::runtime_error( "left and right nodes cannot be null in an intermediate node" );
+      std::vector< std::byte > buffer;
+      std::copy( left.digest().begin(), left.digest().end(), std::back_inserter( buffer ) );
+      std::copy( right.digest().begin(), right.digest().end(), std::back_inserter( buffer ) );
 
-      if ( _left != nullptr )
-         left_digest = _left->hash();
-      else
-         left_digest = _right->hash();
-
-      if ( _right != nullptr )
-         right_digest = _right->hash();
-      else
-         right_digest = _left->hash();
-
-      auto it = std::copy( std::begin( left_digest.digest() ), std::end( left_digest.digest() ), std::begin( double_digest ) );
-      std::copy( std::begin( right_digest.digest() ), std::end( right_digest.digest() ), it );
-
-      _hash = crypto::hash_str( code, (char*)double_digest.data(), double_digest.size() );
+      _hash = crypto::hash_str( code, (char*)buffer.data(), buffer.size() );
    }
 
    multihash hash() const { return _hash; }
 
-   const merkle_node *left() const { return _left.get(); }
-   const merkle_node *right() const { return _right.get(); }
+   const std::shared_ptr< merkle_node< T > >& left() const { return _left; }
+   const std::shared_ptr< merkle_node< T > >& right() const { return _right; }
+   const std::shared_ptr< T >&                value() const { return _value; }
+
+private:
+   std::shared_ptr< merkle_node< T > >  _left, _right;
+   multihash                            _hash;
+   const std::shared_ptr< T >           _value;
 };
 
 template < class T >
 class merkle_tree
 {
-   std::unique_ptr< merkle_node< T > > _root;
-
 public:
-   merkle_tree( multicodec code, std::vector< T > elements )
+   using node_type = merkle_node< T >;
+
+   merkle_tree( multicodec code, const std::vector< T >& elements )
    {
       if ( !elements.size() )
       {
-         _root = std::make_unique< merkle_node< T > >( code );
+         _root = std::make_shared< node_type >( code );
          return;
       }
 
-      std::vector< std::unique_ptr< merkle_node< T > > > processed_nodes;
+      std::vector< std::shared_ptr< node_type > > nodes;
 
       for ( auto& e : elements )
-         processed_nodes.push_back( std::make_unique< merkle_node< T > >( code, e ) );
+         nodes.push_back( std::make_shared< node_type >( code, e ) );
 
-      auto created_nodes = processed_nodes.size();
-      while ( created_nodes > 1 )
+      auto count = nodes.size();
+
+      while ( count > 1 )
       {
-         std::vector< std::unique_ptr< merkle_node< T > > > new_nodes;
-         for ( size_t index = 0; index < processed_nodes.size(); )
+         std::vector< std::shared_ptr< node_type > > new_nodes;
+
+         for ( std::size_t index = 0; index < nodes.size(); index++ )
          {
-            std::unique_ptr< merkle_node< T > > left  = nullptr;
-            std::unique_ptr< merkle_node< T > > right = nullptr;
+            auto left = nodes[ index ];
 
-            if ( index < processed_nodes.size() )
-               left = std::move( processed_nodes[ index++ ] );
-
-            if ( index < processed_nodes.size() )
+            if ( index + 1 < nodes.size() )
             {
-               right = std::move( processed_nodes[ index++ ] );
-               new_nodes.push_back( std::make_unique< merkle_node< T > >( code, std::move( left ), std::move( right ) ) );
+               auto right = nodes[ ++index ];
+               new_nodes.push_back( std::make_shared< node_type >( code, left, right ) );
             }
             else
             {
-               new_nodes.push_back( std::move( left ) );
+               new_nodes.push_back( left );
             }
          }
-         created_nodes = new_nodes.size();
-         processed_nodes = std::move( new_nodes );
+
+         count = new_nodes.size();
+         nodes = new_nodes;
       }
 
-      _root = std::move( processed_nodes.front() );
+      _root = nodes.front();
    }
 
-   const std::unique_ptr< merkle_node< T > >& root()
+   const std::shared_ptr< node_type >& root()
    {
       return _root;
    }
+
+private:
+   std::shared_ptr< node_type > _root;
 };
 
 } // koinos::crypto

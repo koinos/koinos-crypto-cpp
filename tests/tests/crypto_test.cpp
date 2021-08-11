@@ -211,16 +211,25 @@ BOOST_AUTO_TEST_CASE( merkle )
    BOOST_CHECK_EQUAL( n01234567 , hex_string(  h01234567.digest() ) );
    BOOST_CHECK_EQUAL( n012345678, hex_string( h012345678.digest() ) );
 
-   multihash merkle_root;
-
-   std::vector< koinos::variable_blob > blob_values;
-   for ( std::size_t i = 0; i < values.size(); i++ )
-   {
-      blob_values.emplace_back( values[i].begin(), values[i].end() );
-   }
-
    auto tree = merkle_tree( multicodec::sha2_256, values );
    BOOST_CHECK_EQUAL( n012345678, hex_string( tree.root()->hash().digest() ) );
+
+   auto node = tree.root();
+   do
+   {
+      node = node->right();
+   } while ( node->value() == nullptr );
+
+   BOOST_CHECK_EQUAL( "dog", *node->value() );
+
+   node = tree.root();
+   do
+   {
+      node = node->left();
+   } while ( node->value() == nullptr );
+
+   BOOST_CHECK_EQUAL( "the", *node->value() );
+
 }
 
 BOOST_AUTO_TEST_CASE( hash_n_test )

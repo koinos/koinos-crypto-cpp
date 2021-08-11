@@ -49,41 +49,6 @@ private:
    std::vector< std::byte > _digest;
 };
 
-//inline bool multihash_is_zero( const multihash& mh )
-//{
-//   return std::all_of( mh.digest.begin(), mh.digest.end(), []( char c ) { return (c == 0); } );
-//}
-//
-//inline uint64_t multihash_standard_size( uint64_t id )
-//{
-//   switch( id )
-//   {
-//      case CRYPTO_SHA1_ID:
-//         return 20;
-//      case CRYPTO_SHA2_256_ID:
-//         return 32;
-//      case CRYPTO_SHA2_512_ID:
-//         return 64;
-//      case CRYPTO_RIPEMD160_ID:
-//         return 20;
-//      default:
-//         KOINOS_ASSERT( false, unknown_hash_algorithm, "Unknown hash id ${i}", ("i", id) );
-//   }
-//}
-
-//constexpr bool multihash_id_is_known( uint64_t id )
-//{
-//   switch ( id )
-//   {
-//      case CRYPTO_SHA1_ID:
-//      case CRYPTO_SHA2_256_ID:
-//      case CRYPTO_SHA2_512_ID:
-//      case CRYPTO_RIPEMD160_ID:
-//         return true;
-//   }
-//   return false;
-//}
-
 struct encoder
 {
    encoder( multicodec code, std::size_t size = 0 );
