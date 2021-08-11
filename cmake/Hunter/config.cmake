@@ -7,15 +7,15 @@ hunter_config(Boost
 )
 
 hunter_config(koinos_exception
-   URL  "https://github.com/koinos/koinos-exception-cpp/archive/373937ced4b890bc6a8dbdad6452560860a38f5e.tar.gz"
-   SHA1 "1dd40d3e733d7a9220adbe64e47e40c0b1079062"
+   URL  "https://github.com/koinos/koinos-exception-cpp/archive/a9d342a55aeeef28d8ff6eb0dcb7bb19ec8d8899.tar.gz"
+   SHA1 "9992dacf963f85208e462fa2a21a4bfa68018f4c"
    CMAKE_ARGS
       BUILD_TESTS=OFF
 )
 
 hunter_config(koinos_util
-   URL  "https://github.com/koinos/koinos-util-cpp/archive/43280d7adc1f033e42bb2e0d50bb39d31a2dbeaa.tar.gz"
-   SHA1 "5be977696aa13be3d87500b486cd9e6cef0f12a9"
+   URL  "https://github.com/koinos/koinos-util-cpp/archive/0939032432c9433f53a8c6f07167f5fdcef12470.tar.gz"
+   SHA1 "ec88373f7ea7242ccfc93af9d8158a6a496b5bea"
 )
 
 hunter_config(koinos_log

@@ -71,6 +71,26 @@ bool multihash::operator!=( const multihash& rhs ) const
    return !( *this == rhs );
 }
 
+bool multihash::operator< ( const multihash &rhs ) const
+{
+   return _code < rhs._code || _digest < rhs._digest;
+}
+
+bool multihash::operator> ( const multihash &rhs ) const
+{
+   return _code > rhs._code || _digest > rhs._digest;
+}
+
+bool multihash::operator<=( const multihash &rhs ) const
+{
+   return *this < rhs || *this == rhs;
+}
+
+bool multihash::operator>=( const multihash &rhs ) const
+{
+   return *this > rhs || *this == rhs;
+}
+
 const EVP_MD* get_evp_md( multicodec code )
 {
    static const std::map< multicodec, const EVP_MD* > evp_md_map = {

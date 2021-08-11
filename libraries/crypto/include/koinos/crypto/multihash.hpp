@@ -62,6 +62,10 @@ public:
 
    bool operator==( const multihash &rhs ) const;
    bool operator!=( const multihash &rhs ) const;
+   bool operator< ( const multihash &rhs ) const;
+   bool operator<=( const multihash &rhs ) const;
+   bool operator> ( const multihash &rhs ) const;
+   bool operator>=( const multihash &rhs ) const;
 
 private:
    multicodec  _code = multicodec::identity;
@@ -91,7 +95,7 @@ template< typename T >
 typename std::enable_if< std::is_class< typename T::Builds >::value, multihash >::type
 hash( multicodec code, T&& t, std::size_t size = 0 )
 {
-   return hash( code, std::forward< T >( t ), size );
+   return hash( code, t, size );
 }
 
 } // koinos::crypto

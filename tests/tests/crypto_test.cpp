@@ -5,6 +5,8 @@
 #include <iterator>
 #include <vector>
 
+#include <koinos/base58.hpp>
+
 #include <koinos/crypto/elliptic.hpp>
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/crypto/merkle_tree.hpp>
@@ -225,8 +227,8 @@ BOOST_AUTO_TEST_CASE( merkle )
    BOOST_CHECK_EQUAL( *tree.root()->right()->value()                          , values[8] ); // dog
 
    auto mtree = merkle_tree( multicodec::sha2_256, std::vector< std::string >() );
-   BOOST_ASSERT( mtree.root()->hash() == multihash::empty( multicodec::sha2_256 ) );
-   BOOST_ASSERT( mtree.root()->hash() != multihash::zero( multicodec::sha2_256 ) );
+   BOOST_CHECK( mtree.root()->hash() == multihash::empty( multicodec::sha2_256 ) );
+   BOOST_CHECK( mtree.root()->hash() != multihash::zero( multicodec::sha2_256 ) );
 }
 
 BOOST_AUTO_TEST_CASE( capnp_test )
@@ -236,15 +238,13 @@ BOOST_AUTO_TEST_CASE( capnp_test )
    block_topology.setHeight( 100 );
 
    auto mhash = hash( multicodec::sha2_256, block_topology );
-   std::cout << std::underlying_type_t< multicodec >( mhash.code() ) << ": " << hex_string( mhash.digest() ) << std::endl;
 
    auto canonical_words = capnp::canonicalize( block_topology.asReader() );
-   auto capnp_bytes = canonical_words.asBytes();
+   auto capnp_bytes = canonical_words.asChars();
 
-   std::vector< std::byte > bytes(
-      reinterpret_cast< std::byte* >( capnp_bytes.begin() ),
-      reinterpret_cast< std::byte* >( capnp_bytes.end() )
-   );
+   std::vector< char > chars( capnp_bytes.begin(), capnp_bytes.end() );
+
+   BOOST_CHECK( hash( multicodec::sha2_256, (char*)chars.data(), chars.size() ) == mhash );
 }
 
 BOOST_AUTO_TEST_SUITE_END()

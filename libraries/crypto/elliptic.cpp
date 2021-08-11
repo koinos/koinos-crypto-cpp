@@ -1,8 +1,7 @@
+#include <koinos/base58.hpp>
 #include <koinos/crypto/elliptic.hpp>
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/crypto/openssl.hpp>
-
-#include <koinos/pack/rt/util/base58.hpp>
 
 #include <boost/core/ignore_unused.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
@@ -139,7 +138,7 @@ namespace detail {
       sha256 = hash( multicodec::sha2_256, (char*)d.data(), ripemd160.digest().size() + 1 );
       sha256 = hash( multicodec::sha2_256, (char*)sha256.digest().data(), sha256.digest().size() );
       std::memcpy( d.data() + ripemd160.digest().size() + 1, sha256.digest().data(), 4 );
-      return pack::util::impl::encode_base58( (unsigned char*)d.data(), (unsigned char*)d.data() + d.size() );
+      return encode_base58( d );
    }
 
    unsigned int public_key_impl::fingerprint() const
@@ -255,19 +254,24 @@ std::string public_key::to_base58( const compressed_public_key &key )
    std::array< std::byte, 37 > d;
    std::memcpy( d.data(), key.data(), key.size() );
    std::memcpy( d.begin() + key.size(), (const char*)&check, sizeof(check) );
-   return pack::util::impl::encode_base58( (unsigned char*)d.data(), (unsigned char*)d.data() + d.size() );
+   return encode_base58( d );
 }
 
 public_key public_key::from_base58( const std::string& b58 )
 {
-   std::array< char, 37 > d;
-   KOINOS_ASSERT( pack::util::impl::decode_base58( b58, d ),
-      key_serialization_error, "base58 string is not the correct size for a 37 byte key" );
+   std::array< std::byte, 37 > d;
+   decode_base58( b58, d );
+
    compressed_public_key key;
-   uint32_t check = *((uint32_t*)hash( multicodec::sha2_256, d.data(), key.size() ).digest().data());
-   KOINOS_ASSERT( std::memcmp( (char*)&check, d.data() + sizeof(key), sizeof(check) ) == 0,
-      key_serialization_error, "invalid checksum" );
-   std::memcpy( (char*)key.data(), d.data(), sizeof(key) );
+   uint32_t check = *((uint32_t*)hash( multicodec::sha2_256, (char*)d.data(), key.size() ).digest().data());
+
+   KOINOS_ASSERT(
+      std::memcmp( (char*)&check, d.data() + sizeof( key ),
+      sizeof(check) ) == 0,
+      key_serialization_error, "invalid checksum"
+   );
+
+   std::memcpy( key.data(), d.data(), sizeof( key ) );
    return deserialize( key );
 }
 
@@ -341,9 +345,6 @@ private_key private_key::generate_from_seed( const multihash& seed, const multih
    BN_add(secexp, secexp, z);
    BN_mod(secexp, secexp, order, ctx);
 
-//   multihash secret;
-//   secret.id = CRYPTO_SHA2_256_ID;
-//   secret.digest.resize( 32 );
    std::vector< std::byte > digest;
    digest.resize( 32 );
    assert( BN_num_bytes( secexp ) <= int64_t( digest.size() ) );
@@ -412,20 +413,24 @@ std::string private_key::to_wif( std::byte prefix )
    auto extended_hash = hash( multicodec::sha2_256, (char*)d.data(), _key.size() + 1 );
    check = *((uint32_t*)hash( multicodec::sha2_256, (char*)extended_hash.digest().data(), extended_hash.digest().size() ).digest().data());
    std::memcpy( d.data() + _key.size() + 1, (const char*)&check, sizeof(check)  );
-   return pack::util::impl::encode_base58( (unsigned char*)d.data(), (unsigned char*)d.data() + d.size() );
+   return encode_base58( d );
 }
 
 private_key private_key::from_wif( const std::string& b58, std::byte prefix )
 {
    std::array< char, 37 > d;
-   KOINOS_ASSERT( pack::util::impl::decode_base58( b58, d ),
-      key_serialization_error, "base58 string is not the correct size for a private key WIF" );
+   decode_base58( b58, d );
    KOINOS_ASSERT( d[0] == std::to_integer< char >( prefix ), key_serialization_error, "incorrect WIF prefix" );
    private_key key;
    auto extended_hash = hash( multicodec::sha2_256, d.data(), key._key.size() + 1 );
    uint32_t check = *((uint32_t*)hash( multicodec::sha2_256, (char*)extended_hash.digest().data(), extended_hash.digest().size() ).digest().data());
-   KOINOS_ASSERT( std::memcmp( (char*)&check, d.data() + key._key.size() + 1, sizeof(check) ) == 0,
-      key_serialization_error, "invalid checksum" );
+
+   KOINOS_ASSERT(
+      std::memcmp( (char*)&check, d.data() + key._key.size() + 1, sizeof(check) ) == 0,
+      key_serialization_error,
+      "invalid checksum"
+   );
+
    std::memcpy( key._key.data(), d.data() + 1, key._key.size() );
    return key;
 }
