@@ -21,9 +21,9 @@ public:
       _hash = crypto::hash_str( code, (char*)value.data(), value.size() );
    }
 
-   merkle_node( multicodec code, std::shared_ptr< merkle_node< T > > l, std::shared_ptr< merkle_node< T > > r ) :
-      _left( l ),
-      _right( r ),
+   merkle_node( multicodec code, std::unique_ptr< merkle_node< T > > l, std::unique_ptr< merkle_node< T > > r ) :
+      _left( std::move( l ) ),
+      _right( std::move( r ) ),
       _value( nullptr )
    {
       std::vector< std::byte > buffer;
@@ -34,12 +34,12 @@ public:
    }
 
    const multihash&                           hash() const { return _hash; }
-   const std::shared_ptr< merkle_node< T > >& left() const { return _left; }
-   const std::shared_ptr< merkle_node< T > >& right() const { return _right; }
+   const std::unique_ptr< merkle_node< T > >& left() const { return _left; }
+   const std::unique_ptr< merkle_node< T > >& right() const { return _right; }
    const std::shared_ptr< T >&                value() const { return _value; }
 
 private:
-   std::shared_ptr< merkle_node< T > >  _left, _right;
+   std::unique_ptr< merkle_node< T > >  _left, _right;
    multihash                            _hash;
    const std::shared_ptr< T >           _value;
 };
@@ -54,50 +54,50 @@ public:
    {
       if ( !elements.size() )
       {
-         _root = std::make_shared< node_type >( code );
+         _root = std::make_unique< node_type >( code );
          return;
       }
 
-      std::vector< std::shared_ptr< node_type > > nodes;
+      std::vector< std::unique_ptr< node_type > > nodes;
 
       for ( auto& e : elements )
-         nodes.push_back( std::make_shared< node_type >( code, e ) );
+         nodes.push_back( std::make_unique< node_type >( code, e ) );
 
       auto count = nodes.size();
 
       while ( count > 1 )
       {
-         std::vector< std::shared_ptr< node_type > > new_nodes;
+         std::vector< std::unique_ptr< node_type > > new_nodes;
 
          for ( std::size_t index = 0; index < nodes.size(); index++ )
          {
-            auto left = nodes[ index ];
+            auto left = std::move( nodes[ index ] );
 
             if ( index + 1 < nodes.size() )
             {
-               auto right = nodes[ ++index ];
-               new_nodes.push_back( std::make_shared< node_type >( code, left, right ) );
+               auto right = std::move( nodes[ ++index ] );
+               new_nodes.push_back( std::make_unique< node_type >( code, std::move( left ), std::move( right ) ) );
             }
             else
             {
-               new_nodes.push_back( left );
+               new_nodes.push_back( std::move( left ) );
             }
          }
 
          count = new_nodes.size();
-         nodes = new_nodes;
+         nodes = std::move( new_nodes );
       }
 
-      _root = nodes.front();
+      _root = std::move( nodes.front() );
    }
 
-   const std::shared_ptr< node_type >& root()
+   const std::unique_ptr< node_type >& root()
    {
       return _root;
    }
 
 private:
-   std::shared_ptr< node_type > _root;
+   std::unique_ptr< node_type > _root;
 };
 
 } // koinos::crypto
