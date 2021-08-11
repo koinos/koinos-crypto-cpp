@@ -15,19 +15,6 @@ namespace koinos::crypto {
 using koinos::exception;
 using namespace boost::multiprecision::literals;
 
-template< typename Blob >
-std::string hex_string( const Blob& b )
-{
-   static const char hex[16] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
-
-   std::stringstream ss;
-
-   for( auto c : b.data )
-      ss << hex[(c & 0xF0) >> 4] << hex[c & 0x0F];
-
-   return ss.str();
-}
-
 const secp256k1_context* _get_context()
 {
    static secp256k1_context* ctx = secp256k1_context_create( SECP256K1_CONTEXT_VERIFY | SECP256K1_CONTEXT_SIGN );
@@ -144,21 +131,21 @@ namespace detail {
    std::string public_key_impl::to_address( std::byte prefix )const
    {
       auto compressed_key = serialize();
-      auto sha256 = hash_str( multicodec::sha2_256, (char*)compressed_key.data(), compressed_key.size() );
-      auto ripemd160 = hash_str( multicodec::ripemd_160, (char*)sha256.digest().data(), sha256.digest().size() );
+      auto sha256 = hash( multicodec::sha2_256, (char*)compressed_key.data(), compressed_key.size() );
+      auto ripemd160 = hash( multicodec::ripemd_160, (char*)sha256.digest().data(), sha256.digest().size() );
       std::array< std::byte, 25 > d;
       d[0] = prefix;
       std::memcpy( d.data() + 1, ripemd160.digest().data(), ripemd160.digest().size() );
-      sha256 = hash_str( multicodec::sha2_256, (char*)d.data(), ripemd160.digest().size() + 1 );
-      sha256 = hash_str( multicodec::sha2_256, (char*)sha256.digest().data(), sha256.digest().size() );
+      sha256 = hash( multicodec::sha2_256, (char*)d.data(), ripemd160.digest().size() + 1 );
+      sha256 = hash( multicodec::sha2_256, (char*)sha256.digest().data(), sha256.digest().size() );
       std::memcpy( d.data() + ripemd160.digest().size() + 1, sha256.digest().data(), 4 );
       return pack::util::impl::encode_base58( (unsigned char*)d.data(), (unsigned char*)d.data() + d.size() );
    }
 
    unsigned int public_key_impl::fingerprint() const
    {
-      multihash sha256 = hash_str( multicodec::sha2_256, (char*)_key.data(), _key.size() );
-      multihash ripemd160 = hash_str( multicodec::ripemd_160, (char*)sha256.digest().data(), sha256.digest().size() );
+      multihash sha256 = hash( multicodec::sha2_256, (char*)_key.data(), _key.size() );
+      multihash ripemd160 = hash( multicodec::ripemd_160, (char*)sha256.digest().data(), sha256.digest().size() );
       unsigned char* fp = (unsigned char*) ripemd160.digest().data();
       return (fp[0] << 24) | (fp[1] << 16) | (fp[2] << 8) | fp[3];
    }
@@ -263,7 +250,7 @@ std::string public_key::to_base58() const
 
 std::string public_key::to_base58( const compressed_public_key &key )
 {
-   uint32_t check = *((uint32_t*)hash_str( multicodec::sha2_256, (char*)key.data(), key.size() ).digest().data());
+   uint32_t check = *((uint32_t*)hash( multicodec::sha2_256, (char*)key.data(), key.size() ).digest().data());
    assert( key.size() + sizeof(check) == 37 );
    std::array< std::byte, 37 > d;
    std::memcpy( d.data(), key.data(), key.size() );
@@ -277,7 +264,7 @@ public_key public_key::from_base58( const std::string& b58 )
    KOINOS_ASSERT( pack::util::impl::decode_base58( b58, d ),
       key_serialization_error, "base58 string is not the correct size for a 37 byte key" );
    compressed_public_key key;
-   uint32_t check = *((uint32_t*)hash_str( multicodec::sha2_256, d.data(), key.size() ).digest().data());
+   uint32_t check = *((uint32_t*)hash( multicodec::sha2_256, d.data(), key.size() ).digest().data());
    KOINOS_ASSERT( std::memcmp( (char*)&check, d.data() + sizeof(key), sizeof(check) ) == 0,
       key_serialization_error, "invalid checksum" );
    std::memcpy( (char*)key.data(), d.data(), sizeof(key) );
@@ -422,8 +409,8 @@ std::string private_key::to_wif( std::byte prefix )
    assert( _key.size() + sizeof(check) + 1 == d.size() );
    d[0] = prefix;
    std::memcpy( d.data() + 1, _key.data(), _key.size() );
-   auto extended_hash = hash_str( multicodec::sha2_256, (char*)d.data(), _key.size() + 1 );
-   check = *((uint32_t*)hash_str( multicodec::sha2_256, (char*)extended_hash.digest().data(), extended_hash.digest().size() ).digest().data());
+   auto extended_hash = hash( multicodec::sha2_256, (char*)d.data(), _key.size() + 1 );
+   check = *((uint32_t*)hash( multicodec::sha2_256, (char*)extended_hash.digest().data(), extended_hash.digest().size() ).digest().data());
    std::memcpy( d.data() + _key.size() + 1, (const char*)&check, sizeof(check)  );
    return pack::util::impl::encode_base58( (unsigned char*)d.data(), (unsigned char*)d.data() + d.size() );
 }
@@ -435,8 +422,8 @@ private_key private_key::from_wif( const std::string& b58, std::byte prefix )
       key_serialization_error, "base58 string is not the correct size for a private key WIF" );
    KOINOS_ASSERT( d[0] == std::to_integer< char >( prefix ), key_serialization_error, "incorrect WIF prefix" );
    private_key key;
-   auto extended_hash = hash_str( multicodec::sha2_256, d.data(), key._key.size() + 1 );
-   uint32_t check = *((uint32_t*)hash_str( multicodec::sha2_256, (char*)extended_hash.digest().data(), extended_hash.digest().size() ).digest().data());
+   auto extended_hash = hash( multicodec::sha2_256, d.data(), key._key.size() + 1 );
+   uint32_t check = *((uint32_t*)hash( multicodec::sha2_256, (char*)extended_hash.digest().data(), extended_hash.digest().size() ).digest().data());
    KOINOS_ASSERT( std::memcmp( (char*)&check, d.data() + key._key.size() + 1, sizeof(check) ) == 0,
       key_serialization_error, "invalid checksum" );
    std::memcpy( key._key.data(), d.data() + 1, key._key.size() );

@@ -53,7 +53,7 @@ multihash multihash::zero( multicodec code, std::size_t size )
 multihash multihash::empty( multicodec code, std::size_t size )
 {
    char c;
-   return hash_str( code, &c, 0, size );
+   return hash( code, &c, 0, size );
 }
 
 bool multihash::is_zero() const
@@ -152,8 +152,17 @@ void encoder::get_result( std::vector< std::byte >& v )
    );
 }
 
+multihash hash( multicodec code, const std::vector< std::byte >& d, std::size_t size )
+{
+   return hash( code, (char*)d.data(), d.size(), size );
+}
 
-multihash hash_str( multicodec code, const char* data, size_t len, uint64_t size )
+multihash hash( multicodec code, const std::string& s, std::size_t size )
+{
+   return hash( code, s.data(), s.size(), size );
+}
+
+multihash hash( multicodec code, const char* data, std::size_t len, std::size_t size )
 {
    digest_type result;
    encoder e( code, size );

@@ -42,7 +42,7 @@ struct crypto_fixture
 
    void test( koinos::crypto::multicodec code, const std::string& to_hash, const std::string& expected )
    {
-      koinos::crypto::multihash mh1 = koinos::crypto::hash_str( code, to_hash.c_str(), to_hash.size() );
+      koinos::crypto::multihash mh1 = koinos::crypto::hash( code, to_hash.c_str(), to_hash.size() );
       BOOST_CHECK_EQUAL( expected, hex_string( mh1.digest() ) );
       BOOST_CHECK_EQUAL(
          static_cast< std::underlying_type_t< koinos::crypto::multicodec > >( code ),

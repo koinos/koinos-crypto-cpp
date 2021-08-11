@@ -18,7 +18,7 @@ public:
 
    merkle_node( multicodec code, const T& value ) : _left( nullptr ), _right( nullptr ), _value( std::make_shared< T >( value ) )
    {
-      _hash = crypto::hash_str( code, (char*)value.data(), value.size() );
+      _hash = crypto::hash( code, (char*)value.data(), value.size() );
    }
 
    merkle_node( multicodec code, std::unique_ptr< merkle_node< T > > l, std::unique_ptr< merkle_node< T > > r ) :
@@ -30,7 +30,7 @@ public:
       std::copy( left()->hash().digest().begin(), left()->hash().digest().end(), std::back_inserter( buffer ) );
       std::copy( right()->hash().digest().begin(), right()->hash().digest().end(), std::back_inserter( buffer ) );
 
-      _hash = crypto::hash_str( code, (char*)buffer.data(), buffer.size() );
+      _hash = crypto::hash( code, (char*)buffer.data(), buffer.size() );
    }
 
    const multihash&                           hash() const { return _hash; }

@@ -1,15 +1,17 @@
 #include <boost/test/unit_test.hpp>
 
-#include <koinos/crypto/elliptic.hpp>
-#include <koinos/crypto/multihash.hpp>
-#include <koinos/crypto/merkle_tree.hpp>
-
-#include <koinos/tests/crypto_fixture.hpp>
-
 #include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <vector>
+
+#include <koinos/crypto/elliptic.hpp>
+#include <koinos/crypto/multihash.hpp>
+#include <koinos/crypto/merkle_tree.hpp>
+
+#include <koinos/proto/common.capnp.h>
+
+#include <koinos/tests/crypto_fixture.hpp>
 
 using namespace koinos::crypto;
 
@@ -68,13 +70,13 @@ BOOST_AUTO_TEST_CASE( ecc )
 
    for( uint32_t i = 0; i < 100; ++ i )
    {
-      multihash h = hash_str( multicodec::sha2_256, pass.c_str(), pass.size() );
+      multihash h = hash( multicodec::sha2_256, pass.c_str(), pass.size() );
       private_key priv = private_key::regenerate( h );
       BOOST_CHECK( nullkey != priv );
       public_key pub = priv.get_public_key();
 
       pass += "1";
-      multihash h2 = hash_str( multicodec::sha2_256, pass.c_str(), pass.size() );
+      multihash h2 = hash( multicodec::sha2_256, pass.c_str(), pass.size() );
       public_key  pub1  = pub.add( h2 );
       private_key priv1 = private_key::generate_from_seed(h, h2);
 
@@ -92,7 +94,7 @@ BOOST_AUTO_TEST_CASE( private_wif )
 {
    std::string secret = "foobar";
    std::string wif = "5KJTiKfLEzvFuowRMJqDZnSExxxwspVni1G4RcggoPtDqP5XgM1";
-   private_key key1 = private_key::regenerate( hash_str( multicodec::sha2_256, secret.c_str(), secret.size() ) );
+   private_key key1 = private_key::regenerate( hash( multicodec::sha2_256, secret.c_str(), secret.size() ) );
    BOOST_CHECK_EQUAL( key1.to_wif(), wif );
 
    private_key key2 = private_key::from_wif( wif );
@@ -168,7 +170,7 @@ BOOST_AUTO_TEST_CASE( merkle )
       std::vector< std::byte > temp;
       std::copy( ha.digest().begin(), ha.digest().end(), std::back_inserter( temp ) );
       std::copy( hb.digest().begin(), hb.digest().end(), std::back_inserter( temp ) );
-      multihash result = hash_str( multicodec::sha2_256, (char*)temp.data(), temp.size() );
+      multihash result = hash( multicodec::sha2_256, (char*)temp.data(), temp.size() );
       return result;
    };
 
@@ -176,7 +178,7 @@ BOOST_AUTO_TEST_CASE( merkle )
    std::vector< multihash > wh;
    for( size_t i = 0; i < values.size(); i++ )
    {
-      wh.push_back( hash_str( multicodec::sha2_256, values[i].c_str(), values[i].size() ) );
+      wh.push_back( hash( multicodec::sha2_256, values[i].c_str(), values[i].size() ) );
       BOOST_CHECK_EQUAL( wh_hex[i], hex_string( wh[i].digest() ) );
    }
 
@@ -227,25 +229,22 @@ BOOST_AUTO_TEST_CASE( merkle )
    BOOST_ASSERT( mtree.root()->hash() != multihash::zero( multicodec::sha2_256 ) );
 }
 
-BOOST_AUTO_TEST_CASE( hash_n_test )
+BOOST_AUTO_TEST_CASE( capnp_test )
 {
-   std::string obj1 = "abcdefghijklmnopqrstuvwxyz";
-   uint32_t obj2 = 10;
-   koinos::block_height_type obj3( 20 );
+   capnp::MallocMessageBuilder m1;
+   auto block_topology = m1.initRoot< koinos::BlockTopology >();
+   block_topology.setHeight( 100 );
 
-   koinos::variable_blob vb;
-   koinos::pack::to_variable_blob( vb, obj1 );
-   koinos::pack::to_variable_blob( vb, obj2, true );
-   koinos::pack::to_variable_blob( vb, obj3, true );
+   auto mhash = hash( multicodec::sha2_256, block_topology );
+   std::cout << std::underlying_type_t< multicodec >( mhash.code() ) << ": " << hex_string( mhash.digest() ) << std::endl;
 
-   multihash hash_result   = hash( multicodec::sha2_256, vb );
-   multihash hash_n_result = hash_n( multicodec::sha2_256, obj1, obj2, obj3 );
+   auto canonical_words = capnp::canonicalize( block_topology.asReader() );
+   auto capnp_bytes = canonical_words.asBytes();
 
-   BOOST_CHECK_EQUAL(
-      static_cast< std::underlying_type_t< multicodec > >( hash_result.code() ),
-      static_cast< std::underlying_type_t< multicodec > >( hash_n_result.code() )
+   std::vector< std::byte > bytes(
+      reinterpret_cast< std::byte* >( capnp_bytes.begin() ),
+      reinterpret_cast< std::byte* >( capnp_bytes.end() )
    );
-   BOOST_CHECK_EQUAL( hex_string( hash_result.digest() ), hex_string( hash_n_result.digest() ) );
 }
 
 BOOST_AUTO_TEST_SUITE_END()

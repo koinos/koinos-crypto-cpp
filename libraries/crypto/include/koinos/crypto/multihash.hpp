@@ -4,6 +4,8 @@
 
 #include <openssl/evp.h>
 
+#include <capnp/message.h>
+
 #include <koinos/exception.hpp>
 
 namespace koinos::crypto {
@@ -66,31 +68,30 @@ private:
    digest_type _digest;
 };
 
-template< typename... Types >
-inline multihash hash_n( multicodec code, Types&&... vars )
+multihash hash( multicodec code, const std::vector< std::byte >& d, std::size_t size = 0 );
+multihash hash( multicodec code, const std::string& s, std::size_t size = 0 );
+multihash hash( multicodec code, const char* data, std::size_t len, std::size_t size = 0 );
+
+template< typename T >
+typename std::enable_if< std::is_class< typename T::Builds >::value, multihash >::type
+hash( multicodec code, const T& t, std::size_t size = 0 )
 {
-   digest_type result;
-   encoder e( code );
+   auto canonical_words = capnp::canonicalize( t.asReader() );
+   auto capnp_bytes = canonical_words.asBytes();
 
-//   variable_blob vb;
-//   detail::pack_variadic_types( vb, std::forward< Types >( vars )... );
+   std::vector< std::byte > bytes(
+      reinterpret_cast< std::byte* >( capnp_bytes.begin() ),
+      reinterpret_cast< std::byte* >( capnp_bytes.end() )
+   );
 
-//   koinos::pack::to_binary( e, vb );
-   e.get_result( result );
-   return multihash( code, result );
+   return hash( code, bytes, size );
 }
 
 template< typename T >
-inline multihash hash( multicodec code, const T& t, std::size_t size = 0 )
+typename std::enable_if< std::is_class< typename T::Builds >::value, multihash >::type
+hash( multicodec code, T&& t, std::size_t size = 0 )
 {
-   digest_type result;
-   encoder e( code, size );
-//   koinos::pack::to_binary( e, t );
-   e.get_result( result );
-   return multihash( code, result );
+   return hash( code, std::forward< T >( t ), size );
 }
-
-multihash hash_str( multicodec code, const char* data, size_t len, uint64_t size = 0 );
-
 
 } // koinos::crypto
