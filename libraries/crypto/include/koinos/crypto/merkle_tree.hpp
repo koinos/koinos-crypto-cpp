@@ -26,18 +26,14 @@ public:
       _right( r ),
       _value( nullptr )
    {
-      multihash left = _left->hash();
-      multihash right = _right->hash();
-
       std::vector< std::byte > buffer;
-      std::copy( left.digest().begin(), left.digest().end(), std::back_inserter( buffer ) );
-      std::copy( right.digest().begin(), right.digest().end(), std::back_inserter( buffer ) );
+      std::copy( left()->hash().digest().begin(), left()->hash().digest().end(), std::back_inserter( buffer ) );
+      std::copy( right()->hash().digest().begin(), right()->hash().digest().end(), std::back_inserter( buffer ) );
 
       _hash = crypto::hash_str( code, (char*)buffer.data(), buffer.size() );
    }
 
-   multihash hash() const { return _hash; }
-
+   const multihash&                           hash() const { return _hash; }
    const std::shared_ptr< merkle_node< T > >& left() const { return _left; }
    const std::shared_ptr< merkle_node< T > >& right() const { return _right; }
    const std::shared_ptr< T >&                value() const { return _value; }
