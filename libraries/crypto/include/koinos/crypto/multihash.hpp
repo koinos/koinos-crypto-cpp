@@ -82,7 +82,7 @@ public:
    bool operator>=( const multihash &rhs ) const;
 
    template< class Container >
-   Container as()
+   Container as() const
    {
       std::stringstream stream;
 
@@ -95,15 +95,6 @@ public:
       static_assert( sizeof( *b.begin() ) == sizeof( std::byte ) );
 
       return b;
-   }
-
-   template<>
-   kj::Array< kj::byte > as< kj::Array< kj::byte > >()
-   {
-      std::stringstream stream;
-      koinos::to_binary( stream, *this );
-      std::string str = stream.str();
-      return kj::heapArray( reinterpret_cast< kj::byte* >( str.data() ), str.size() );
    }
 
    template< class Container >
@@ -126,6 +117,15 @@ private:
    multicodec  _code = multicodec::identity;
    digest_type _digest;
 };
+
+template<>
+inline kj::Array< kj::byte > multihash::as< kj::Array< kj::byte > >() const
+{
+   std::stringstream stream;
+   koinos::to_binary( stream, *this );
+   std::string str = stream.str();
+   return kj::heapArray( reinterpret_cast< kj::byte* >( str.data() ), str.size() );
+}
 
 multihash hash( multicodec code, const std::vector< std::byte >& d, std::size_t size = 0 );
 multihash hash( multicodec code, const std::string& s, std::size_t size = 0 );
