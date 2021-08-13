@@ -1,8 +1,10 @@
 #include <boost/test/unit_test.hpp>
 
 #include <algorithm>
+#include <deque>
 #include <iostream>
 #include <iterator>
+#include <list>
 #include <sstream>
 #include <vector>
 
@@ -261,15 +263,52 @@ BOOST_AUTO_TEST_CASE( multihash_serialization )
 
    std::stringstream stream;
    koinos::to_binary( stream, mhash );
-   multihash mhash2;
-   koinos::from_binary( stream, mhash2 );
-   BOOST_CHECK( mhash == mhash2 );
 
-   auto mhash3 = multihash::from( mhash.as< std::vector< std::byte > >() );
-   BOOST_CHECK( mhash == mhash3 );
+   multihash tmp;
+   koinos::from_binary( stream, tmp );
+   BOOST_CHECK( mhash == tmp );
 
-   auto mhash4 = multihash::from( mhash.as< kj::Array< kj::byte > >().asPtr() );
-   BOOST_CHECK( mhash == mhash4 );
+   tmp = multihash::from( mhash.as< std::vector< std::byte > >() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< std::vector< char > >() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< std::vector< unsigned char > >() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< std::vector< uint8_t > >() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< std::deque< std::byte > >() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< std::deque< char > >() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< std::deque< unsigned char > >() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< std::deque< uint8_t > >() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< std::list< std::byte > >() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< std::list< char > >() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< std::list< unsigned char > >() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< std::list< uint8_t > >() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< kj::Array< kj::byte > >().asPtr() );
+   BOOST_CHECK( mhash == tmp );
+
+   tmp = multihash::from( mhash.as< kj::Array< kj::byte > >() );
+   BOOST_CHECK( mhash == tmp );
 }
 
 BOOST_AUTO_TEST_SUITE_END()

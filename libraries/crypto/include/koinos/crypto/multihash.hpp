@@ -81,18 +81,22 @@ public:
    bool operator> ( const multihash &rhs ) const;
    bool operator>=( const multihash &rhs ) const;
 
-   template< typename T >
-   T as();
-
-   template<>
-   std::vector< std::byte > as< std::vector< std::byte > >()
+   template< class Container >
+   Container as()
    {
+      Container b;
+
+      static_assert( sizeof( *b.begin() ) == sizeof( std::byte ) );
+
       std::stringstream stream;
+
       koinos::to_binary( stream, *this );
 
       std::string str = stream.str();
-      std::vector< std::byte > b( str.size() );
-      std::transform( str.begin(), str.end(), b.begin(), [] ( char c ) { return std::byte( c ); } );
+
+      b.resize( str.size() );
+      std::transform( str.begin(), str.end(), b.begin(), [] ( char c ) { return decltype( *b.begin() )( c ); } );
+
       return b;
    }
 
@@ -105,29 +109,19 @@ public:
       return kj::heapArray( reinterpret_cast< kj::byte* >( str.data() ), str.size() );
    }
 
-   template< typename T >
-   static multihash from( const T& t );
-
-   template<>
-   multihash from< std::vector< std::byte > >( const std::vector< std::byte >& b )
+   template< class Container >
+   static multihash from( const Container& c )
    {
-      multihash m;
+      static_assert( sizeof( *c.begin() ) == sizeof( std::byte ) );
 
+      multihash m;
       std::stringstream stream;
-      stream.write( reinterpret_cast< const char* >( b.data() ), b.size() );
+
+      for ( const auto& e : c )
+         stream.write( reinterpret_cast< const char* >( &e ), sizeof( std::byte ) );
+
       koinos::from_binary( stream, m );
 
-      return m;
-   }
-
-   template<>
-   multihash from< kj::ArrayPtr< kj::byte > >( const kj::ArrayPtr< kj::byte >& b )
-   {
-      multihash m;
-
-      std::stringstream stream;
-      stream.write( reinterpret_cast< const char* >( b.begin() ), b.size() );
-      koinos::from_binary( stream, m );
       return m;
    }
 
