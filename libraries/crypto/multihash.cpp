@@ -117,10 +117,11 @@ const EVP_MD* get_evp_md( multicodec code )
 encoder::encoder( multicodec code, std::size_t size )
 {
    static const uint64_t MAX_HASH_SIZE = std::min< uint64_t >(
-      {std::numeric_limits< uint8_t >::max(),              // We potentially store the size in uint8_t value
-       std::numeric_limits< unsigned int >::max(),         // We cast the size to unsigned int for openssl call
-       EVP_MAX_MD_SIZE                                     // Max size supported by OpenSSL library
-      });
+   {
+      std::numeric_limits< uint8_t >::max(),      // We potentially store the size in uint8_t value
+      std::numeric_limits< unsigned int >::max(), // We cast the size to unsigned int for openssl call
+      EVP_MAX_MD_SIZE                             // Max size supported by OpenSSL library
+   } );
 
    _code = code;
 
@@ -184,7 +185,7 @@ void encoder::get_result( std::vector< std::byte >& v )
 
 multihash hash( multicodec code, const std::vector< std::byte >& d, std::size_t size )
 {
-   return hash( code, (char*)d.data(), d.size(), size );
+   return hash( code, reinterpret_cast< const char* >( d.data() ), d.size(), size );
 }
 
 multihash hash( multicodec code, const std::string& s, std::size_t size )
