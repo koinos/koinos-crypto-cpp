@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <iterator>
+#include <sstream>
 #include <vector>
 
 #include <koinos/base58.hpp>
@@ -236,6 +237,8 @@ BOOST_AUTO_TEST_CASE( capnp_test )
    capnp::MallocMessageBuilder m1;
    auto block_topology = m1.initRoot< koinos::BlockTopology >();
    block_topology.setHeight( 100 );
+   block_topology.setId( hash( multicodec::sha2_256, std::string( "id" ) ).as< kj::Array< kj::byte > >() );
+   block_topology.setPrevious( hash( multicodec::sha2_256, std::string( "previous" ) ).as< kj::Array< kj::byte > >() );
 
    auto mhash = hash( multicodec::sha2_256, block_topology );
 
@@ -243,8 +246,30 @@ BOOST_AUTO_TEST_CASE( capnp_test )
    auto capnp_bytes = canonical_words.asChars();
 
    std::vector< char > chars( capnp_bytes.begin(), capnp_bytes.end() );
+   BOOST_CHECK( hash( multicodec::sha2_256, chars.data(), chars.size() ) == mhash );
 
-   BOOST_CHECK( hash( multicodec::sha2_256, (char*)chars.data(), chars.size() ) == mhash );
+   auto id_hash = multihash::from( block_topology.getId().asBytes() );
+   BOOST_CHECK( id_hash == hash( multicodec::sha2_256, std::string( "id" ) ) );
+
+   auto previous_hash = multihash::from( block_topology.getPrevious().asBytes() );
+   BOOST_CHECK( previous_hash == hash( multicodec::sha2_256, std::string( "previous" ) ) );
+}
+
+BOOST_AUTO_TEST_CASE( multihash_serialization )
+{
+   auto mhash = hash( multicodec::sha2_256, std::string( "a quick brown fox jumps over the lazy dog" ) );
+
+   std::stringstream stream;
+   koinos::to_binary( stream, mhash );
+   multihash mhash2;
+   koinos::from_binary( stream, mhash2 );
+   BOOST_CHECK( mhash == mhash2 );
+
+   auto mhash3 = multihash::from( mhash.as< std::vector< std::byte > >() );
+   BOOST_CHECK( mhash == mhash3 );
+
+   auto mhash4 = multihash::from( mhash.as< kj::Array< kj::byte > >().asPtr() );
+   BOOST_CHECK( mhash == mhash4 );
 }
 
 BOOST_AUTO_TEST_SUITE_END()

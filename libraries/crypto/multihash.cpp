@@ -61,6 +61,16 @@ bool multihash::is_zero() const
    return std::all_of( _digest.begin(), _digest.end(), []( std::byte b ) { return b == std::byte{ 0x00 }; } );
 }
 
+multihash& multihash::operator=( const multihash& rhs )
+{
+   _code = rhs._code;
+
+   _digest.resize( rhs._digest.size() );
+   std::copy( rhs._digest.begin(), rhs._digest.end(), _digest.begin() );
+
+   return *this;
+}
+
 bool multihash::operator==( const multihash& rhs ) const
 {
    return _code == rhs._code && _digest == rhs._digest;
@@ -71,12 +81,12 @@ bool multihash::operator!=( const multihash& rhs ) const
    return !( *this == rhs );
 }
 
-bool multihash::operator< ( const multihash &rhs ) const
+bool multihash::operator<( const multihash &rhs ) const
 {
    return _code < rhs._code || _digest < rhs._digest;
 }
 
-bool multihash::operator> ( const multihash &rhs ) const
+bool multihash::operator>( const multihash &rhs ) const
 {
    return _code > rhs._code || _digest > rhs._digest;
 }

@@ -1,14 +1,26 @@
 #pragma once
 
 #include <cstddef>
+#include <sstream>
 
 #include <openssl/evp.h>
 
 #include <capnp/message.h>
 
 #include <koinos/exception.hpp>
+#include <koinos/varint.hpp>
 
-namespace koinos::crypto {
+namespace koinos {
+
+namespace crypto { class multihash; }
+
+template< typename Stream >
+inline void to_binary( Stream& s, const crypto::multihash& m );
+
+template< typename Stream >
+inline void from_binary( Stream& s, crypto::multihash& v );
+
+namespace crypto {
 
 KOINOS_DECLARE_EXCEPTION( unknown_hash_algorithm );
 KOINOS_DECLARE_EXCEPTION( multihash_size_mismatch );
@@ -34,7 +46,7 @@ struct encoder
    encoder( multicodec code, std::size_t size = 0 );
    ~encoder();
 
-   void write( const char* d, size_t len );
+   void write( const char* d, std::size_t len );
    void put( char c ) { write( &c, 1 ); }
    void reset();
    void get_result( digest_type& v );
@@ -60,12 +72,64 @@ public:
    static multihash     zero( multicodec id, std::size_t size = 0 );
    static multihash     empty( multicodec id, std::size_t size = 0 );
 
+   multihash& operator =( const multihash& rhs );
+
    bool operator==( const multihash &rhs ) const;
    bool operator!=( const multihash &rhs ) const;
    bool operator< ( const multihash &rhs ) const;
    bool operator<=( const multihash &rhs ) const;
    bool operator> ( const multihash &rhs ) const;
    bool operator>=( const multihash &rhs ) const;
+
+   template< typename T >
+   T as();
+
+   template<>
+   std::vector< std::byte > as< std::vector< std::byte > >()
+   {
+      std::stringstream stream;
+      koinos::to_binary( stream, *this );
+
+      std::string str = stream.str();
+      std::vector< std::byte > b( str.size() );
+      std::transform( str.begin(), str.end(), b.begin(), [] ( char c ) { return std::byte( c ); } );
+      return b;
+   }
+
+   template<>
+   kj::Array< kj::byte > as< kj::Array< kj::byte > >()
+   {
+      std::stringstream stream;
+      koinos::to_binary( stream, *this );
+      std::string str = stream.str();
+      return kj::heapArray( reinterpret_cast< kj::byte* >( str.data() ), str.size() );
+   }
+
+   template< typename T >
+   static multihash from( const T& t );
+
+   template<>
+   multihash from< std::vector< std::byte > >( const std::vector< std::byte >& b )
+   {
+      multihash m;
+
+      std::stringstream stream;
+      stream.write( reinterpret_cast< const char* >( b.data() ), b.size() );
+      koinos::from_binary( stream, m );
+
+      return m;
+   }
+
+   template<>
+   multihash from< kj::ArrayPtr< kj::byte > >( const kj::ArrayPtr< kj::byte >& b )
+   {
+      multihash m;
+
+      std::stringstream stream;
+      stream.write( reinterpret_cast< const char* >( b.begin() ), b.size() );
+      koinos::from_binary( stream, m );
+      return m;
+   }
 
 private:
    multicodec  _code = multicodec::identity;
@@ -80,13 +144,11 @@ template< typename T >
 typename std::enable_if< std::is_class< typename T::Builds >::value, multihash >::type
 hash( multicodec code, const T& t, std::size_t size = 0 )
 {
-   auto canonical_words = capnp::canonicalize( t.asReader() );
-   auto capnp_bytes = canonical_words.asBytes();
+   auto words = capnp::canonicalize( t.asReader() );
+   auto cbytes = words.asBytes();
 
-   std::vector< std::byte > bytes(
-      reinterpret_cast< std::byte* >( capnp_bytes.begin() ),
-      reinterpret_cast< std::byte* >( capnp_bytes.end() )
-   );
+   std::vector< std::byte > bytes( cbytes.size() );
+   std::transform( cbytes.begin(), cbytes.end(), bytes.begin(), [] ( kj::byte c ) { return std::byte( c ); } );
 
    return hash( code, bytes, size );
 }
@@ -98,4 +160,33 @@ hash( multicodec code, T&& t, std::size_t size = 0 )
    return hash( code, t, size );
 }
 
-} // koinos::crypto
+} // crypto
+
+template< typename Stream >
+inline void to_binary( Stream& s, const crypto::multihash& m )
+{
+   auto code = unsigned_varint( static_cast< std::underlying_type_t< crypto::multicodec > >( m.code() ) );
+   auto size = unsigned_varint( m.digest().size() );
+
+   to_binary( s, code );
+   to_binary( s, size );
+   s.write( reinterpret_cast< const char* >( m.digest().data() ), m.digest().size() );
+}
+
+template< typename Stream >
+inline void from_binary( Stream& s, crypto::multihash& v )
+{
+   unsigned_varint     code;
+   unsigned_varint     size;
+   crypto::digest_type digest;
+
+   from_binary( s, code );
+   from_binary( s, size );
+
+   digest.resize( size.value );
+   s.read( reinterpret_cast< char* >( digest.data() ), size.value );
+
+   v = crypto::multihash( static_cast< crypto::multicodec >( code.value ), digest );
+}
+
+} // koinos
