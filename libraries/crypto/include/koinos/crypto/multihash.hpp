@@ -84,18 +84,15 @@ public:
    template< class Container >
    Container as()
    {
-      Container b;
-
-      static_assert( sizeof( *b.begin() ) == sizeof( std::byte ) );
-
       std::stringstream stream;
 
       koinos::to_binary( stream, *this );
-
       std::string str = stream.str();
 
-      b.resize( str.size() );
-      std::transform( str.begin(), str.end(), b.begin(), [] ( char c ) { return decltype( *b.begin() )( c ); } );
+      Container b( str.size() );
+      std::transform( str.begin(), str.end(), b.begin(), []( char c ) { return reinterpret_cast< decltype( *b.begin() ) >( c ); } );
+
+      static_assert( sizeof( *b.begin() ) == sizeof( std::byte ) );
 
       return b;
    }
@@ -112,8 +109,6 @@ public:
    template< class Container >
    static multihash from( const Container& c )
    {
-      static_assert( sizeof( *c.begin() ) == sizeof( std::byte ) );
-
       multihash m;
       std::stringstream stream;
 
@@ -121,6 +116,8 @@ public:
          stream.write( reinterpret_cast< const char* >( &e ), sizeof( std::byte ) );
 
       koinos::from_binary( stream, m );
+
+      static_assert( sizeof( *c.begin() ) == sizeof( std::byte ) );
 
       return m;
    }
