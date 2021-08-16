@@ -124,8 +124,8 @@ multihash hash( multicodec code, const std::string& s, std::size_t size = 0 );
 multihash hash( multicodec code, const char* data, std::size_t len, std::size_t size = 0 );
 
 template< typename T >
-typename std::enable_if< std::is_function< typename T::SerializeToOstream >::value, multihash >::type
-hash( multicodec code, const T& t, std::size_t size = 0 )
+typename std::enable_if_t< std::is_function_v< typename T::SerializeToOstream >, multihash >
+hash( multicodec code, const T&& t, std::size_t size = 0 )
 {
    std::stringstream stream;
 
@@ -137,13 +137,6 @@ hash( multicodec code, const T& t, std::size_t size = 0 )
    std::transform( str.begin(), str.end(), bytes.begin(), [] ( char c ) { return std::byte( c ); } );
 
    return hash( code, bytes, size );
-}
-
-template< typename T >
-typename std::enable_if< std::is_class< typename T::Builds >::value, multihash >::type
-hash( multicodec code, T&& t, std::size_t size = 0 )
-{
-   return hash( code, t, size );
 }
 
 } // crypto
