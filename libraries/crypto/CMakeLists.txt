@@ -3,6 +3,7 @@ find_package(OpenSSL REQUIRED)
 find_package(Boost CONFIG REQUIRED log log_setup filesystem)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(CapnProto CONFIG REQUIRED)
+find_package(Protobuf CONFIG REQUIRED)
 find_package(koinos_proto CONFIG REQUIRED)
 find_package(koinos_exception CONFIG REQUIRED)
 find_package(koinos_log CONFIG REQUIRED)
@@ -15,7 +16,7 @@ add_library(koinos_crypto
             openssl.cpp
             ${HEADERS})
 
-target_link_libraries(koinos_crypto PUBLIC Koinos::exception Koinos::proto Koinos::util OpenSSL::SSL OpenSSL::Crypto secp256k1::secp256k1)
+target_link_libraries(koinos_crypto PUBLIC Koinos::exception Koinos::proto Koinos::util OpenSSL::SSL OpenSSL::Crypto secp256k1::secp256k1 protobuf::libprotobuf)
 
 target_include_directories(koinos_crypto PUBLIC
    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

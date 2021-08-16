@@ -234,27 +234,10 @@ BOOST_AUTO_TEST_CASE( merkle )
    BOOST_CHECK( mtree.root()->hash() != multihash::zero( multicodec::sha2_256 ) );
 }
 
-BOOST_AUTO_TEST_CASE( capnp_test )
+BOOST_AUTO_TEST_CASE( protocol_buffers_test )
 {
-   capnp::MallocMessageBuilder m1;
-   auto block_topology = m1.initRoot< koinos::BlockTopology >();
-   block_topology.setHeight( 100 );
-   block_topology.setId( hash( multicodec::sha2_256, std::string( "id" ) ).as< kj::Array< kj::byte > >() );
-   block_topology.setPrevious( hash( multicodec::sha2_256, std::string( "previous" ) ).as< kj::Array< kj::byte > >() );
-
-   auto mhash = hash( multicodec::sha2_256, block_topology );
-
-   auto canonical_words = capnp::canonicalize( block_topology.asReader() );
-   auto capnp_bytes = canonical_words.asChars();
-
-   std::vector< char > chars( capnp_bytes.begin(), capnp_bytes.end() );
-   BOOST_CHECK( hash( multicodec::sha2_256, chars.data(), chars.size() ) == mhash );
-
-   auto id_hash = multihash::from( block_topology.getId().asBytes() );
-   BOOST_CHECK( id_hash == hash( multicodec::sha2_256, std::string( "id" ) ) );
-
-   auto previous_hash = multihash::from( block_topology.getPrevious().asBytes() );
-   BOOST_CHECK( previous_hash == hash( multicodec::sha2_256, std::string( "previous" ) ) );
+   KOINOS_TODO( "Test hashing a protocol buffer type" );
+   BOOST_CHECK( true );
 }
 
 BOOST_AUTO_TEST_CASE( multihash_serialization )
@@ -304,10 +287,7 @@ BOOST_AUTO_TEST_CASE( multihash_serialization )
    tmp = multihash::from( mhash.as< std::list< uint8_t > >() );
    BOOST_CHECK( mhash == tmp );
 
-   tmp = multihash::from( mhash.as< kj::Array< kj::byte > >().asPtr() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< kj::Array< kj::byte > >() );
+   tmp = multihash::from( mhash.as< std::string >() );
    BOOST_CHECK( mhash == tmp );
 }
 

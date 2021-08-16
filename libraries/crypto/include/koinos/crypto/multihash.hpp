@@ -5,7 +5,7 @@
 
 #include <openssl/evp.h>
 
-#include <capnp/message.h>
+#include <google/protobuf/message.h>
 
 #include <koinos/exception.hpp>
 #include <koinos/varint.hpp>
@@ -89,7 +89,8 @@ public:
       koinos::to_binary( stream, *this );
       std::string str = stream.str();
 
-      Container b( str.size() );
+      Container b;
+      b.resize( str.size() );
       std::transform( str.begin(), str.end(), b.begin(), []( char c ) { return reinterpret_cast< decltype( *b.begin() ) >( c ); } );
 
       static_assert( sizeof( *b.begin() ) == sizeof( std::byte ) );
@@ -118,28 +119,22 @@ private:
    digest_type _digest;
 };
 
-template<>
-inline kj::Array< kj::byte > multihash::as< kj::Array< kj::byte > >() const
-{
-   std::stringstream stream;
-   koinos::to_binary( stream, *this );
-   std::string str = stream.str();
-   return kj::heapArray( reinterpret_cast< kj::byte* >( str.data() ), str.size() );
-}
-
 multihash hash( multicodec code, const std::vector< std::byte >& d, std::size_t size = 0 );
 multihash hash( multicodec code, const std::string& s, std::size_t size = 0 );
 multihash hash( multicodec code, const char* data, std::size_t len, std::size_t size = 0 );
 
 template< typename T >
-typename std::enable_if< std::is_class< typename T::Builds >::value, multihash >::type
+typename std::enable_if< std::is_function< typename T::SerializeToOstream >::value, multihash >::type
 hash( multicodec code, const T& t, std::size_t size = 0 )
 {
-   auto words = capnp::canonicalize( t.asReader() );
-   auto cbytes = words.asBytes();
+   std::stringstream stream;
 
-   std::vector< std::byte > bytes( cbytes.size() );
-   std::transform( cbytes.begin(), cbytes.end(), bytes.begin(), [] ( kj::byte c ) { return std::byte( c ); } );
+   t.SerializeToOstream( stream );
+
+   std::string str = stream.str();
+
+   std::vector< std::byte > bytes( str.size() );
+   std::transform( str.begin(), str.end(), bytes.begin(), [] ( char c ) { return std::byte( c ); } );
 
    return hash( code, bytes, size );
 }
