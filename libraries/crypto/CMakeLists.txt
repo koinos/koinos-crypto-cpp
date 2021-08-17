@@ -7,6 +7,7 @@ find_package(koinos_proto CONFIG REQUIRED)
 find_package(koinos_exception CONFIG REQUIRED)
 find_package(koinos_log CONFIG REQUIRED)
 find_package(koinos_util CONFIG REQUIRED)
+find_package(CapnProto CONFIG REQUIRED)
 
 file(GLOB HEADERS "include/koinos/crypto/*.hpp")
 add_library(koinos_crypto

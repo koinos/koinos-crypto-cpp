@@ -14,7 +14,7 @@
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/crypto/merkle_tree.hpp>
 
-#include <koinos/koinos/common.pb.h>
+#include <koinos/common.pb.h>
 
 #include <koinos/tests/crypto_fixture.hpp>
 

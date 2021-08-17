@@ -33,8 +33,8 @@ hunter_config(koinos_types
 )
 
 hunter_config(koinos_proto
-   URL  "https://github.com/koinos/koinos-proto-cpp/archive/29b400730724c7da67d56987a0aa505160e4978c.tar.gz"
-   SHA1 "db1495e022845bd8524ed1862a9c1dc19e8aa91f"
+   URL  "https://github.com/koinos/koinos-proto-cpp/archive/ce1223cf512cef075e4053263bd48b1efbc79ef2.tar.gz"
+   SHA1 "9fb0d92a1f694518e3a609a72e1c5defb0c7c345"
 )
 
 hunter_config(libsecp256k1
