@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <memory>
 
 #include <koinos/crypto/multihash.hpp>
@@ -18,7 +17,7 @@ public:
 
    merkle_node( multicodec code, const T& value ) : _left( nullptr ), _right( nullptr ), _value( std::make_shared< T >( value ) )
    {
-      _hash = crypto::hash( code, (char*)value.data(), value.size() );
+      _hash = crypto::hash( code, value );
    }
 
    merkle_node( multicodec code, std::unique_ptr< merkle_node< T > > l, std::unique_ptr< merkle_node< T > > r ) :
@@ -30,7 +29,7 @@ public:
       std::copy( left()->hash().digest().begin(), left()->hash().digest().end(), std::back_inserter( buffer ) );
       std::copy( right()->hash().digest().begin(), right()->hash().digest().end(), std::back_inserter( buffer ) );
 
-      _hash = crypto::hash( code, (char*)buffer.data(), buffer.size() );
+      _hash = crypto::hash( code, reinterpret_cast< const char* >( buffer.data() ), buffer.size() );
    }
 
    const multihash&                           hash() const { return _hash; }
@@ -67,7 +66,7 @@ public:
 
       while ( count > 1 )
       {
-         std::vector< std::unique_ptr< node_type > > new_nodes;
+         std::vector< std::unique_ptr< node_type > > next;
 
          for ( std::size_t index = 0; index < nodes.size(); index++ )
          {
@@ -76,16 +75,16 @@ public:
             if ( index + 1 < nodes.size() )
             {
                auto right = std::move( nodes[ ++index ] );
-               new_nodes.push_back( std::make_unique< node_type >( code, std::move( left ), std::move( right ) ) );
+               next.push_back( std::make_unique< node_type >( code, std::move( left ), std::move( right ) ) );
             }
             else
             {
-               new_nodes.push_back( std::move( left ) );
+               next.push_back( std::move( left ) );
             }
          }
 
-         count = new_nodes.size();
-         nodes = std::move( new_nodes );
+         count = next.size();
+         nodes = std::move( next );
       }
 
       _root = std::move( nodes.front() );

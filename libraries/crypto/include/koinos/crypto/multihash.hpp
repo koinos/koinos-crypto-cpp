@@ -127,14 +127,11 @@ template< typename T >
 typename std::enable_if_t< std::is_member_function_pointer_v< decltype( &T::SerializeToString ) >, multihash >
 hash( multicodec code, const T& t, std::size_t size = 0 )
 {
-   std::string str;
+   std::string s;
 
-   t.SerializeToString( &str );
+   t.SerializeToString( &s );
 
-   std::vector< std::byte > bytes( str.size() );
-   std::transform( str.begin(), str.end(), bytes.begin(), [] ( char c ) { return std::byte( c ); } );
-
-   return hash( code, bytes, size );
+   return hash( code, s, size );
 }
 
 template< typename T >

@@ -241,8 +241,8 @@ BOOST_AUTO_TEST_CASE( protocol_buffers_test )
 
    koinos::block_topology block_topology;
    block_topology.set_height( 100 );
-   block_topology.set_id( hash( multicodec::sha2_256, id_str ).as< std::string >() );
-   block_topology.set_previous( hash( multicodec::sha2_256, previous_str ).as< std::string >() );
+   block_topology.set_id( hash( multicodec::sha1, id_str ).as< std::string >() );
+   block_topology.set_previous( hash( multicodec::sha2_512, previous_str ).as< std::string >() );
 
    auto mhash = hash( multicodec::sha2_256, block_topology );
 
@@ -256,15 +256,15 @@ BOOST_AUTO_TEST_CASE( protocol_buffers_test )
    BOOST_CHECK( hash( multicodec::sha2_256, bytes ) == mhash );
 
    auto id_hash = multihash::from( block_topology.id() );
-   BOOST_CHECK( id_hash == hash( multicodec::sha2_256, id_str ) );
+   BOOST_CHECK( id_hash == hash( multicodec::sha1, id_str ) );
 
    auto previous_hash = multihash::from( block_topology.previous() );
-   BOOST_CHECK( previous_hash == hash( multicodec::sha2_256, previous_str ) );
+   BOOST_CHECK( previous_hash == hash( multicodec::sha2_512, previous_str ) );
 }
 
 BOOST_AUTO_TEST_CASE( multihash_serialization )
 {
-   auto mhash = hash( multicodec::sha2_256, std::string( "a quick brown fox jumps over the lazy dog" ) );
+   auto mhash = hash( multicodec::ripemd_160, std::string( "a quick brown fox jumps over the lazy dog" ) );
 
    std::stringstream stream;
    koinos::to_binary( stream, mhash );
