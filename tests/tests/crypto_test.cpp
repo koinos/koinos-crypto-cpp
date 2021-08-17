@@ -14,7 +14,7 @@
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/crypto/merkle_tree.hpp>
 
-#include <koinos/proto/common.capnp.h>
+#include <koinos/koinos/common.pb.h>
 
 #include <koinos/tests/crypto_fixture.hpp>
 
@@ -236,8 +236,30 @@ BOOST_AUTO_TEST_CASE( merkle )
 
 BOOST_AUTO_TEST_CASE( protocol_buffers_test )
 {
-   KOINOS_TODO( "Test hashing a protocol buffer type" );
-   BOOST_CHECK( true );
+   std::string id_str = "id";
+   std::string previous_str = "previous";
+
+   koinos::block_topology block_topology;
+   block_topology.set_height( 100 );
+   block_topology.set_id( hash( multicodec::sha2_256, id_str ).as< std::string >() );
+   block_topology.set_previous( hash( multicodec::sha2_256, previous_str ).as< std::string >() );
+
+   auto mhash = hash( multicodec::sha2_256, block_topology );
+
+   std::stringstream stream;
+   block_topology.SerializeToOstream( &stream );
+   std::string str = stream.str();
+
+   std::vector< std::byte > bytes( str.size() );
+   std::transform( str.begin(), str.end(), bytes.begin(), []( char c ) { return std::byte( c ); } );
+
+   BOOST_CHECK( hash( multicodec::sha2_256, bytes ) == mhash );
+
+   auto id_hash = multihash::from( block_topology.id() );
+   BOOST_CHECK( id_hash == hash( multicodec::sha2_256, id_str ) );
+
+   auto previous_hash = multihash::from( block_topology.previous() );
+   BOOST_CHECK( previous_hash == hash( multicodec::sha2_256, previous_str ) );
 }
 
 BOOST_AUTO_TEST_CASE( multihash_serialization )
