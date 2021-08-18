@@ -1,13 +1,12 @@
 find_package(libsecp256k1 CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_package(Boost CONFIG REQUIRED log log_setup filesystem)
+find_package(Boost CONFIG REQUIRED log log_setup)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(koinos_proto CONFIG REQUIRED)
 find_package(koinos_exception CONFIG REQUIRED)
 find_package(koinos_log CONFIG REQUIRED)
 find_package(koinos_util CONFIG REQUIRED)
-find_package(CapnProto CONFIG REQUIRED)
 
 file(GLOB HEADERS "include/koinos/crypto/*.hpp")
 add_library(koinos_crypto

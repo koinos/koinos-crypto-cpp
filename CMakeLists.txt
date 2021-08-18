@@ -31,11 +31,10 @@ set(
 include("cmake/HunterGate.cmake")
 
 HunterGate(
-   URL "https://github.com/cpp-pm/hunter/archive/v0.23.289.tar.gz"
-   SHA1 "7d7323704780200a1575fc089d26f8a8a393a1fa"
+   URL "https://github.com/cpp-pm/hunter/archive/v0.23.313.tar.gz"
+   SHA1 "6c369e5aab2749a616917df3b23511535f413604"
    LOCAL
 )
-
 
 project(koinos_crypto VERSION 0.1.0 LANGUAGES CXX C)
 
@@ -86,7 +85,7 @@ if(COVERAGE)
      EXCLUDE "libraries/vendor/*" "build/generated/*")
 endif()
 
-hunter_add_package(Boost COMPONENTS log filesystem test)
+hunter_add_package(Boost COMPONENTS log exception test)
 hunter_add_package(nlohmann_json)
 hunter_add_package(libsecp256k1)
 hunter_add_package(OpenSSL)
