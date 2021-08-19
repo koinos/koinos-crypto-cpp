@@ -7,6 +7,8 @@
 #include <iostream>
 #include <map>
 
+#include <google/protobuf/stubs/strutil.h>
+
 namespace koinos::crypto {
 
 multihash::multihash( multicodec code, digest_type digest ) : _code( code ), _digest( digest ) {}
@@ -200,6 +202,15 @@ multihash hash( multicodec code, const char* data, std::size_t len, std::size_t 
    e.write( data, len );
    e.get_result( result );
    return multihash( code, result );
+}
+
+std::ostream& operator<<( std::ostream& out, const crypto::multihash& mh )
+{
+   std::stringstream bin;
+   to_binary( bin, mh );
+   std::string base64;
+   google::protobuf::WebSafeBase64EscapeWithPadding(bin.str(), &base64);
+   return out << base64;
 }
 
 } // koinos::crypto

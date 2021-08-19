@@ -81,6 +81,8 @@ public:
    bool operator> ( const multihash &rhs ) const;
    bool operator>=( const multihash &rhs ) const;
 
+   friend std::ostream& operator<<( std::ostream&, const multihash& );
+
    template< class Container >
    Container as() const
    {
@@ -140,6 +142,8 @@ hash( multicodec code, T&& t, std::size_t size = 0 )
 {
    return hash( code, t, size );
 }
+
+std::ostream& operator<<( std::ostream&, const crypto::multihash& );
 
 } // crypto
 
