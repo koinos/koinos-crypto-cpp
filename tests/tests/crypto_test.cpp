@@ -314,7 +314,6 @@ BOOST_AUTO_TEST_CASE( multihash_serialization )
 
    std::stringstream ss;
    ss << mhash;
-   std::cout << ss.str() << std::endl;
    BOOST_CHECK( ss.str() == "0yAUCcmZ8hOv_xl5PYKIAjxRL3GHPes=" );
 }
 

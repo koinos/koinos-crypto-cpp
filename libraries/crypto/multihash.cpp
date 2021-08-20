@@ -209,7 +209,7 @@ std::ostream& operator<<( std::ostream& out, const crypto::multihash& mh )
    std::stringstream bin;
    to_binary( bin, mh );
    std::string base64;
-   google::protobuf::WebSafeBase64EscapeWithPadding(bin.str(), &base64);
+   google::protobuf::WebSafeBase64EscapeWithPadding( bin.str(), &base64 );
    return out << base64;
 }
 
