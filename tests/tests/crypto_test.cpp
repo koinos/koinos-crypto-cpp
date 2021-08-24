@@ -317,4 +317,24 @@ BOOST_AUTO_TEST_CASE( multihash_serialization )
    BOOST_CHECK( ss.str() == "0yAUCcmZ8hOv_xl5PYKIAjxRL3GHPes=" );
 }
 
+BOOST_AUTO_TEST_CASE( variadic_hash )
+{
+   std::string id_str = "id";
+   std::string previous_str = "previous";
+
+   koinos::block_topology block_topology;
+   block_topology.set_height( 100 );
+   block_topology.set_id( hash( multicodec::sha1, id_str ).as< std::string >() );
+   block_topology.set_previous( hash( multicodec::sha2_512, previous_str ).as< std::string >() );
+
+   std::stringstream ss;
+   block_topology.SerializeToOstream( &ss );
+   ss << "a quick brown fox jumps over the lazy dog";
+
+   auto mhash1 = hash( multicodec::ripemd_160, ss.str() );
+   auto mhash2 = hash_n( multicodec::ripemd_160, block_topology, std::string( "a quick brown fox jumps over the lazy dog" ) );
+
+   BOOST_REQUIRE( mhash1 == mhash2 );
+}
+
 BOOST_AUTO_TEST_SUITE_END()

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <ostream>
 #include <sstream>
 
 #include <openssl/evp.h>
@@ -41,15 +42,19 @@ enum class multicodec : std::uint64_t
 
 using digest_type = std::vector< std::byte >;
 
-struct encoder
+struct encoder final : std::streambuf, std::ostream
 {
    encoder( multicodec code, std::size_t size = 0 );
+   encoder( const encoder& ) = delete;
+   encoder( encoder&& ) = delete;
    ~encoder();
 
+   std::streamsize xsputn( const char* s, std::streamsize n ) override;
+
    void write( const char* d, std::size_t len );
-   void put( char c ) { write( &c, 1 ); }
+   void put( char c );
    void reset();
-   void get_result( digest_type& v );
+   multihash get_hash();
 
    private:
       const EVP_MD* md = nullptr;
@@ -62,7 +67,8 @@ class multihash
 {
 public:
    multihash() = default;
-   multihash( multicodec code, digest_type digest );
+   multihash( multicodec code, const digest_type& digest );
+   multihash( multicodec code, digest_type&& digest );
 
    multicodec           code() const;
    const digest_type&   digest() const;
@@ -121,6 +127,37 @@ private:
    digest_type _digest;
 };
 
+namespace detail {
+
+void hash_impl( encoder& e, const std::vector< std::byte >& d );
+void hash_impl( encoder& e, const std::string& s );
+void hash_impl( encoder& e, const char* data, std::size_t len );
+
+template< typename T >
+typename std::enable_if_t< std::is_member_function_pointer_v< decltype( &T::SerializeToString ) >, void >
+hash_impl( encoder& e, const T& t )
+{
+   t.SerializeToOstream( &e );
+}
+
+template< typename T >
+typename std::enable_if_t< std::is_member_function_pointer_v< decltype( &T::SerializeToString ) >, void >
+hash_impl( encoder& e, T&& t )
+{
+   t.SerializeToOstream( &e );
+}
+
+inline void hash_n_impl( encoder& e ) {} // Base cases for recursive templating
+
+template< typename T, typename... Ts >
+void hash_n_impl( encoder& e, T&& t, Ts... ts )
+{
+   hash_impl( e, std::forward< T >( t ) );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+} // detail
+
 multihash hash( multicodec code, const std::vector< std::byte >& d, std::size_t size = 0 );
 multihash hash( multicodec code, const std::string& s, std::size_t size = 0 );
 multihash hash( multicodec code, const char* data, std::size_t len, std::size_t size = 0 );
@@ -129,11 +166,9 @@ template< typename T >
 typename std::enable_if_t< std::is_member_function_pointer_v< decltype( &T::SerializeToString ) >, multihash >
 hash( multicodec code, const T& t, std::size_t size = 0 )
 {
-   std::string s;
-
-   t.SerializeToString( &s );
-
-   return hash( code, s, size );
+   encoder e( code, size );
+   detail::hash_impl( e, t );
+   return e.get_hash();
 }
 
 template< typename T >
@@ -141,6 +176,14 @@ typename std::enable_if_t< std::is_member_function_pointer_v< decltype( &T::Seri
 hash( multicodec code, T&& t, std::size_t size = 0 )
 {
    return hash( code, t, size );
+}
+
+template< typename... Ts >
+multihash hash_n( multicodec code, Ts... ts )
+{
+   encoder e( code );
+   detail::hash_n_impl( e, std::forward< Ts >( ts )... );
+   return e.get_hash();
 }
 
 std::ostream& operator<<( std::ostream&, const crypto::multihash& );

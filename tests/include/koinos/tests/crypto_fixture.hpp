@@ -58,9 +58,8 @@ struct crypto_fixture
       for (int i = 0; i < 16777215; i++) {
          enc.write( TEST6.c_str(), TEST6.size() );
       }
-      koinos::crypto::digest_type digest;
-      enc.get_result( digest );
-      koinos::crypto::multihash mh1( code, digest );
+
+      auto mh1 = enc.get_hash();
       BOOST_CHECK_EQUAL( expected, hex_string( mh1.digest() ) );
       BOOST_CHECK_EQUAL(
          static_cast< std::underlying_type_t< koinos::crypto::multicodec > >( code ),

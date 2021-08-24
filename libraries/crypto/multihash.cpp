@@ -11,7 +11,8 @@
 
 namespace koinos::crypto {
 
-multihash::multihash( multicodec code, digest_type digest ) : _code( code ), _digest( digest ) {}
+multihash::multihash( multicodec code, const digest_type& digest ) : _code( code ), _digest( digest ) {}
+multihash::multihash( multicodec code, digest_type&& digest )      : _code( code ), _digest( digest ) {}
 
 multicodec multihash::code() const
 {
@@ -116,7 +117,8 @@ const EVP_MD* get_evp_md( multicodec code )
    return md_itr != evp_md_map.end() ? md_itr->second : nullptr;
 }
 
-encoder::encoder( multicodec code, std::size_t size )
+encoder::encoder( multicodec code, std::size_t size ) :
+   std::streambuf(), std::ostream( this )
 {
    static const uint64_t MAX_HASH_SIZE = std::min< uint64_t >(
    {
@@ -150,10 +152,22 @@ encoder::~encoder()
       EVP_MD_CTX_destroy( mdctx );
 }
 
+std::streamsize encoder::xsputn( const char* d, std::streamsize n )
+{
+   EVP_DigestUpdate( mdctx, d, n );
+   pbump( n );
+   return n;
+}
+
 void encoder::write( const char* d, size_t len )
 {
-   EVP_DigestUpdate( mdctx, d, len );
-};
+   xsputn( d, len );
+}
+
+void encoder::put( char c )
+{
+   xsputn( &c, 1 );
+}
 
 void encoder::reset()
 {
@@ -167,10 +181,10 @@ void encoder::reset()
    }
 }
 
-void encoder::get_result( std::vector< std::byte >& v )
+multihash encoder::get_hash()
 {
    unsigned int size = (unsigned int) _size;
-   v.resize( _size );
+   std::vector< std::byte > v( size );
 
    KOINOS_ASSERT(
       EVP_DigestFinal_ex( mdctx, (unsigned char*)( v.data() ), &size ),
@@ -183,7 +197,28 @@ void encoder::get_result( std::vector< std::byte >& v )
       "OpenSSL EVP_DigestFinal_ex returned hash size ${size}, does not match expected hash size ${_size}",
       ("size", size)("_size", _size)
    );
+
+   return multihash( _code, std::move( v ) );
 }
+
+namespace detail {
+
+void hash_impl( encoder& e, const std::vector< std::byte >& d )
+{
+   hash_impl( e, reinterpret_cast< const char * >( d.data() ), d.size() );
+}
+
+void hash_impl( encoder& e, const std::string& s )
+{
+   hash_impl( e, s.data(), s.size() );
+}
+
+void hash_impl( encoder& e, const char* data, std::size_t len )
+{
+   e.write( data, len );
+}
+
+} // detail
 
 multihash hash( multicodec code, const std::vector< std::byte >& d, std::size_t size )
 {
@@ -197,11 +232,9 @@ multihash hash( multicodec code, const std::string& s, std::size_t size )
 
 multihash hash( multicodec code, const char* data, std::size_t len, std::size_t size )
 {
-   digest_type result;
    encoder e( code, size );
-   e.write( data, len );
-   e.get_result( result );
-   return multihash( code, result );
+   detail::hash_impl( e, data, len );
+   return e.get_hash();
 }
 
 std::ostream& operator<<( std::ostream& out, const crypto::multihash& mh )
