@@ -131,7 +131,7 @@ namespace detail {
    {
       auto compressed_key = serialize();
       auto sha256 = hash( multicodec::sha2_256, (char*)compressed_key.data(), compressed_key.size() );
-      auto ripemd160 = hash( multicodec::ripemd_160, (char*)sha256.digest().data(), sha256.digest().size() );
+      auto ripemd160 = hash( multicodec::ripemd_160, sha256 );
       std::array< std::byte, 25 > d;
       d[0] = prefix;
       std::memcpy( d.data() + 1, ripemd160.digest().data(), ripemd160.digest().size() );

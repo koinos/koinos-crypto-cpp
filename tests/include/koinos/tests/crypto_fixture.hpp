@@ -53,7 +53,7 @@ struct crypto_fixture
 
    void test_big( koinos::crypto::multicodec code, const std::string& expected )
    {
-      koinos::crypto::encoder enc( code );
+      koinos::crypto::detail::encoder enc( code );
       for (char c : TEST6) { enc.put(c); }
       for (int i = 0; i < 16777215; i++) {
          enc.write( TEST6.c_str(), TEST6.size() );

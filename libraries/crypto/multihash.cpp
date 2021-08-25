@@ -9,7 +9,7 @@
 
 #include <google/protobuf/stubs/strutil.h>
 
-namespace koinos::crypto {
+namespace koinos { namespace crypto {
 
 multihash::multihash( multicodec code, const digest_type& digest ) : _code( code ), _digest( digest ) {}
 multihash::multihash( multicodec code, digest_type&& digest )      : _code( code ), _digest( digest ) {}
@@ -117,6 +117,8 @@ const EVP_MD* get_evp_md( multicodec code )
    return md_itr != evp_md_map.end() ? md_itr->second : nullptr;
 }
 
+namespace detail {
+
 encoder::encoder( multicodec code, std::size_t size ) :
    std::streambuf(), std::ostream( this )
 {
@@ -201,8 +203,6 @@ multihash encoder::get_hash()
    return multihash( _code, std::move( v ) );
 }
 
-namespace detail {
-
 void hash_impl( encoder& e, const std::vector< std::byte >& d )
 {
    hash_impl( e, reinterpret_cast< const char * >( d.data() ), d.size() );
@@ -232,7 +232,7 @@ multihash hash( multicodec code, const std::string& s, std::size_t size )
 
 multihash hash( multicodec code, const char* data, std::size_t len, std::size_t size )
 {
-   encoder e( code, size );
+   detail::encoder e( code, size );
    detail::hash_impl( e, data, len );
    return e.get_hash();
 }
@@ -246,4 +246,33 @@ std::ostream& operator<<( std::ostream& out, const crypto::multihash& mh )
    return out << base64;
 }
 
-} // koinos::crypto
+} // crypto
+
+template<>
+void to_binary< crypto::multihash >( std::ostream& s, const crypto::multihash& m )
+{
+   auto code = unsigned_varint( static_cast< std::underlying_type_t< crypto::multicodec > >( m.code() ) );
+   auto size = unsigned_varint( m.digest().size() );
+
+   to_binary( s, code );
+   to_binary( s, size );
+   s.write( reinterpret_cast< const char* >( m.digest().data() ), m.digest().size() );
+}
+
+template<>
+void from_binary< crypto::multihash >( std::istream& s, crypto::multihash& v )
+{
+   unsigned_varint     code;
+   unsigned_varint     size;
+   crypto::digest_type digest;
+
+   from_binary( s, code );
+   from_binary( s, size );
+
+   digest.resize( size.value );
+   s.read( reinterpret_cast< char* >( digest.data() ), size.value );
+
+   v = crypto::multihash( static_cast< crypto::multicodec >( code.value ), digest );
+}
+
+} // koinos

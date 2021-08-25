@@ -21,8 +21,8 @@ hunter_config(koinos_log
 )
 
 hunter_config(koinos_util
-   URL  "https://github.com/koinos/koinos-util-cpp/archive/22ebcd097395e1e6035fbec7bb993a44e0eab92d.tar.gz"
-   SHA1 "8e51b7d1eac85c413c92b4ffe722a848c6a35520"
+   URL  "https://github.com/koinos/koinos-util-cpp/archive/45f28c63db205da097cdafe39dd5d49dc67ca183.tar.gz"
+   SHA1 "3cd0459d232959c36c5ef7b131a7c636b74de03c"
    CMAKE_ARGS
       BUILD_TESTS=OFF
 )
@@ -43,4 +43,3 @@ hunter_config(libsecp256k1
    URL "https://github.com/soramitsu/soramitsu-libsecp256k1/archive/c7630e1bac638c0f16ee66d4dce7b5c49eecbaa5.tar.gz"
    SHA1 "0534fa8948f279b26fd102905215a56f0ad7fa18"
 )
-

@@ -9,17 +9,20 @@
 #include <google/protobuf/message.h>
 
 #include <koinos/exception.hpp>
+#include <koinos/type_traits.hpp>
 #include <koinos/varint.hpp>
+
+namespace google::protobuf{ class Message; }
 
 namespace koinos {
 
 namespace crypto { class multihash; }
 
-template< typename Stream >
-inline void to_binary( Stream& s, const crypto::multihash& m );
+template<>
+void to_binary< crypto::multihash >( std::ostream& s, const crypto::multihash& m );
 
-template< typename Stream >
-inline void from_binary( Stream& s, crypto::multihash& v );
+template<>
+void from_binary< crypto::multihash >( std::istream& s, crypto::multihash& v );
 
 namespace crypto {
 
@@ -41,27 +44,6 @@ enum class multicodec : std::uint64_t
 };
 
 using digest_type = std::vector< std::byte >;
-
-struct encoder final : std::streambuf, std::ostream
-{
-   encoder( multicodec code, std::size_t size = 0 );
-   encoder( const encoder& ) = delete;
-   encoder( encoder&& ) = delete;
-   ~encoder();
-
-   std::streamsize xsputn( const char* s, std::streamsize n ) override;
-
-   void write( const char* d, std::size_t len );
-   void put( char c );
-   void reset();
-   multihash get_hash();
-
-   private:
-      const EVP_MD* md = nullptr;
-      EVP_MD_CTX* mdctx = nullptr;
-      multicodec _code;
-      std::size_t _size;
-};
 
 class multihash
 {
@@ -129,22 +111,43 @@ private:
 
 namespace detail {
 
+struct encoder final : std::streambuf, std::ostream
+{
+   encoder( multicodec code, std::size_t size = 0 );
+   encoder( const encoder& ) = delete;
+   encoder( encoder&& ) = delete;
+   ~encoder();
+
+   std::streamsize xsputn( const char* s, std::streamsize n ) override;
+
+   void write( const char* d, std::size_t len );
+   void put( char c );
+   void reset();
+   multihash get_hash();
+
+   private:
+      const EVP_MD* md = nullptr;
+      EVP_MD_CTX* mdctx = nullptr;
+      multicodec _code;
+      std::size_t _size;
+};
+
 void hash_impl( encoder& e, const std::vector< std::byte >& d );
 void hash_impl( encoder& e, const std::string& s );
 void hash_impl( encoder& e, const char* data, std::size_t len );
 
 template< typename T >
-typename std::enable_if_t< std::is_member_function_pointer_v< decltype( &T::SerializeToString ) >, void >
+typename std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void >
 hash_impl( encoder& e, const T& t )
 {
    t.SerializeToOstream( &e );
 }
 
 template< typename T >
-typename std::enable_if_t< std::is_member_function_pointer_v< decltype( &T::SerializeToString ) >, void >
-hash_impl( encoder& e, T&& t )
+std::enable_if_t< has_to_binary_v< T >, void >
+hash_impl( encoder& e, const T& t )
 {
-   t.SerializeToOstream( &e );
+   to_binary( e, t );
 }
 
 inline void hash_n_impl( encoder& e ) {} // Base cases for recursive templating
@@ -152,7 +155,7 @@ inline void hash_n_impl( encoder& e ) {} // Base cases for recursive templating
 template< typename T, typename... Ts >
 void hash_n_impl( encoder& e, T&& t, Ts... ts )
 {
-   hash_impl( e, std::forward< T >( t ) );
+   hash_impl( e, t );
    hash_n_impl( e, std::forward< Ts >( ts )... );
 }
 
@@ -163,25 +166,25 @@ multihash hash( multicodec code, const std::string& s, std::size_t size = 0 );
 multihash hash( multicodec code, const char* data, std::size_t len, std::size_t size = 0 );
 
 template< typename T >
-typename std::enable_if_t< std::is_member_function_pointer_v< decltype( &T::SerializeToString ) >, multihash >
-hash( multicodec code, const T& t, std::size_t size = 0 )
-{
-   encoder e( code, size );
-   detail::hash_impl( e, t );
-   return e.get_hash();
-}
-
-template< typename T >
-typename std::enable_if_t< std::is_member_function_pointer_v< decltype( &T::SerializeToString ) >, multihash >
+typename std::enable_if_t< std::is_base_of_v< google::protobuf::Message, std::decay_t< T > >, multihash >
 hash( multicodec code, T&& t, std::size_t size = 0 )
 {
    return hash( code, t, size );
 }
 
+template< typename T >
+std::enable_if_t< has_to_binary_v< T >, multihash >
+hash( multicodec code, T&& t, std::size_t size = 0 )
+{
+   detail::encoder e( code, size );
+   detail::hash_impl( e, t );
+   return e.get_hash();
+}
+
 template< typename... Ts >
 multihash hash_n( multicodec code, Ts... ts )
 {
-   encoder e( code );
+   detail::encoder e( code );
    detail::hash_n_impl( e, std::forward< Ts >( ts )... );
    return e.get_hash();
 }
@@ -189,32 +192,5 @@ multihash hash_n( multicodec code, Ts... ts )
 std::ostream& operator<<( std::ostream&, const crypto::multihash& );
 
 } // crypto
-
-template< typename Stream >
-inline void to_binary( Stream& s, const crypto::multihash& m )
-{
-   auto code = unsigned_varint( static_cast< std::underlying_type_t< crypto::multicodec > >( m.code() ) );
-   auto size = unsigned_varint( m.digest().size() );
-
-   to_binary( s, code );
-   to_binary( s, size );
-   s.write( reinterpret_cast< const char* >( m.digest().data() ), m.digest().size() );
-}
-
-template< typename Stream >
-inline void from_binary( Stream& s, crypto::multihash& v )
-{
-   unsigned_varint     code;
-   unsigned_varint     size;
-   crypto::digest_type digest;
-
-   from_binary( s, code );
-   from_binary( s, size );
-
-   digest.resize( size.value );
-   s.read( reinterpret_cast< char* >( digest.data() ), size.value );
-
-   v = crypto::multihash( static_cast< crypto::multicodec >( code.value ), digest );
-}
 
 } // koinos
