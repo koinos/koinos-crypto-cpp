@@ -218,6 +218,11 @@ void hash_impl( encoder& e, const char* data, std::size_t len )
    e.write( data, len );
 }
 
+void hash_impl( encoder& e, const multihash& m )
+{
+   hash_impl( e, (const char*)m.digest().data(), m.digest().size() );
+}
+
 } // detail
 
 multihash hash( multicodec code, const std::vector< std::byte >& d, std::size_t size )

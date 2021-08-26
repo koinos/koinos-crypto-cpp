@@ -135,6 +135,7 @@ struct encoder final : std::streambuf, std::ostream
 void hash_impl( encoder& e, const std::vector< std::byte >& d );
 void hash_impl( encoder& e, const std::string& s );
 void hash_impl( encoder& e, const char* data, std::size_t len );
+void hash_impl( encoder& e, const multihash& m );
 
 template< typename T >
 typename std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void >
@@ -144,7 +145,7 @@ hash_impl( encoder& e, const T& t )
 }
 
 template< typename T >
-std::enable_if_t< has_to_binary_v< T >, void >
+std::enable_if_t< has_to_binary_v< T > && !std::is_same_v< T, multihash >, void >
 hash_impl( encoder& e, const T& t )
 {
    to_binary( e, t );
@@ -169,7 +170,9 @@ template< typename T >
 typename std::enable_if_t< std::is_base_of_v< google::protobuf::Message, std::decay_t< T > >, multihash >
 hash( multicodec code, T&& t, std::size_t size = 0 )
 {
-   return hash( code, t, size );
+   detail::encoder e( code, size );
+   detail::hash_impl( e, t );
+   return e.get_hash();
 }
 
 template< typename T >
