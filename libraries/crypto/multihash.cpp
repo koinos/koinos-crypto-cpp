@@ -56,7 +56,7 @@ multihash multihash::zero( multicodec code, std::size_t size )
 multihash multihash::empty( multicodec code, std::size_t size )
 {
    char c;
-   return hash( code, &c, 0, size );
+   return hash( code, &c, std::size_t( 0 ), size );
 }
 
 bool multihash::is_zero() const
@@ -120,27 +120,10 @@ const EVP_MD* get_evp_md( multicodec code )
 namespace detail {
 
 encoder::encoder( multicodec code, std::size_t size ) :
-   std::streambuf(), std::ostream( this )
+   std::streambuf(), std::ostream( this ), _code( code )
 {
-   static const uint64_t MAX_HASH_SIZE = std::min< uint64_t >(
-   {
-      std::numeric_limits< uint8_t >::max(),      // We potentially store the size in uint8_t value
-      std::numeric_limits< unsigned int >::max(), // We cast the size to unsigned int for openssl call
-      EVP_MAX_MD_SIZE                             // Max size supported by OpenSSL library
-   } );
+   set_size( size );
 
-   _code = code;
-
-   if ( size == 0 )
-      size = multihash::standard_size( code );
-
-   KOINOS_ASSERT(
-      size <= MAX_HASH_SIZE,
-      multihash_size_limit_exceeded,
-      "requested hash size ${size} is larger than max size ${max}", ("size", size)("max", MAX_HASH_SIZE)
-   );
-
-   _size = size;
    OpenSSL_add_all_digests();
    md = get_evp_md( code );
    KOINOS_ASSERT( md, unknown_hash_algorithm, "unknown hash id ${i}", ("i", static_cast< std::underlying_type_t< multicodec > >( code )) );
@@ -181,6 +164,27 @@ void encoder::reset()
       mdctx = EVP_MD_CTX_create();
       EVP_DigestInit_ex( mdctx, md, NULL );
    }
+}
+
+void encoder::set_size( std::size_t size )
+{
+   static const uint64_t MAX_HASH_SIZE = std::min< uint64_t >(
+   {
+      std::numeric_limits< uint8_t >::max(),      // We potentially store the size in uint8_t value
+      std::numeric_limits< unsigned int >::max(), // We cast the size to unsigned int for openssl call
+      EVP_MAX_MD_SIZE                             // Max size supported by OpenSSL library
+   } );
+
+  if ( size == 0 )
+      size = multihash::standard_size( _code );
+
+   KOINOS_ASSERT(
+      size <= MAX_HASH_SIZE,
+      multihash_size_limit_exceeded,
+      "requested hash size ${size} is larger than max size ${max}", ("size", size)("max", MAX_HASH_SIZE)
+   );
+
+   _size = size;
 }
 
 multihash encoder::get_hash()
@@ -224,23 +228,6 @@ void hash_impl( encoder& e, const multihash& m )
 }
 
 } // detail
-
-multihash hash( multicodec code, const std::vector< std::byte >& d, std::size_t size )
-{
-   return hash( code, reinterpret_cast< const char* >( d.data() ), d.size(), size );
-}
-
-multihash hash( multicodec code, const std::string& s, std::size_t size )
-{
-   return hash( code, s.data(), s.size(), size );
-}
-
-multihash hash( multicodec code, const char* data, std::size_t len, std::size_t size )
-{
-   detail::encoder e( code, size );
-   detail::hash_impl( e, data, len );
-   return e.get_hash();
-}
 
 std::ostream& operator<<( std::ostream& out, const crypto::multihash& mh )
 {

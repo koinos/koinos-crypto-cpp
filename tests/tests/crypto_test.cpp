@@ -332,7 +332,7 @@ BOOST_AUTO_TEST_CASE( variadic_hash )
    ss << "a quick brown fox jumps over the lazy dog";
 
    auto mhash1 = hash( multicodec::ripemd_160, ss.str() );
-   auto mhash2 = hash_n( multicodec::ripemd_160, block_topology, std::string( "a quick brown fox jumps over the lazy dog" ) );
+   auto mhash2 = hash( multicodec::ripemd_160, block_topology, std::string( "a quick brown fox jumps over the lazy dog" ) );
 
    BOOST_REQUIRE( mhash1 == mhash2 );
 }

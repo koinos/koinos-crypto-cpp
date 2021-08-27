@@ -123,6 +123,7 @@ struct encoder final : std::streambuf, std::ostream
    void write( const char* d, std::size_t len );
    void put( char c );
    void reset();
+   void set_size( std::size_t size = 0 );
    multihash get_hash();
 
    private:
@@ -137,14 +138,14 @@ void hash_impl( encoder& e, const std::string& s );
 void hash_impl( encoder& e, const char* data, std::size_t len );
 void hash_impl( encoder& e, const multihash& m );
 
-template< typename T >
-typename std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void >
+template< class T >
+std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void >
 hash_impl( encoder& e, const T& t )
 {
    t.SerializeToOstream( &e );
 }
 
-template< typename T >
+template< class T >
 std::enable_if_t< has_to_binary_v< T > && !std::is_same_v< T, multihash >, void >
 hash_impl( encoder& e, const T& t )
 {
@@ -153,7 +154,26 @@ hash_impl( encoder& e, const T& t )
 
 inline void hash_n_impl( encoder& e ) {} // Base cases for recursive templating
 
-template< typename T, typename... Ts >
+inline void hash_n_impl( encoder& e, std::size_t size )
+{
+   e.set_size( size );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, const char* data, std::size_t len, Ts... ts )
+{
+   hash_impl( e, data, len );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, char* data, std::size_t len, Ts... ts )
+{
+   hash_impl( e, data, len );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class T, class... Ts >
 void hash_n_impl( encoder& e, T&& t, Ts... ts )
 {
    hash_impl( e, t );
@@ -162,30 +182,8 @@ void hash_n_impl( encoder& e, T&& t, Ts... ts )
 
 } // detail
 
-multihash hash( multicodec code, const std::vector< std::byte >& d, std::size_t size = 0 );
-multihash hash( multicodec code, const std::string& s, std::size_t size = 0 );
-multihash hash( multicodec code, const char* data, std::size_t len, std::size_t size = 0 );
-
-template< typename T >
-typename std::enable_if_t< std::is_base_of_v< google::protobuf::Message, std::decay_t< T > >, multihash >
-hash( multicodec code, T&& t, std::size_t size = 0 )
-{
-   detail::encoder e( code, size );
-   detail::hash_impl( e, t );
-   return e.get_hash();
-}
-
-template< typename T >
-std::enable_if_t< has_to_binary_v< T >, multihash >
-hash( multicodec code, T&& t, std::size_t size = 0 )
-{
-   detail::encoder e( code, size );
-   detail::hash_impl( e, t );
-   return e.get_hash();
-}
-
-template< typename... Ts >
-multihash hash_n( multicodec code, Ts... ts )
+template< class... Ts >
+multihash hash( multicodec code, Ts... ts )
 {
    detail::encoder e( code );
    detail::hash_n_impl( e, std::forward< Ts >( ts )... );
