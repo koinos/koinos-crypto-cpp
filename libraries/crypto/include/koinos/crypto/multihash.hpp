@@ -182,6 +182,20 @@ void hash_n_impl( encoder& e, T&& t, Ts... ts )
 
 } // detail
 
+/*
+ * hash() hashes a series of objects in to a single hash.
+ *
+ * Types currently supported:
+ *
+ * - std::string
+ * - std::vector< std::byte >
+ * - C string (const char*, size_t)
+ * - Protobuf generated types (google::protobuf::Message)
+ * - Types implementing `to_binary( std::ostream&, const T& )`
+ *
+ * If the last parameter is std::size_t, a custom hash size will be used.
+ * Effectively, the function's signature is hash( multicodec code, Ts... ts, size_t size = 0 )
+ */
 template< class... Ts >
 multihash hash( multicodec code, Ts... ts )
 {
