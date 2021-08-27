@@ -146,10 +146,24 @@ hash_impl( encoder& e, const T& t )
 }
 
 template< class T >
+std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void >
+hash_impl( encoder& e, const T* t )
+{
+   t->SerializeToOstream( &e );
+}
+
+template< class T >
 std::enable_if_t< has_to_binary_v< T > && !std::is_same_v< T, multihash >, void >
 hash_impl( encoder& e, const T& t )
 {
    to_binary( e, t );
+}
+
+template< class T >
+std::enable_if_t< has_to_binary_v< T > && !std::is_same_v< T, multihash >, void >
+hash_impl( encoder& e, const T* t )
+{
+   to_binary( e, *t );
 }
 
 inline void hash_n_impl( encoder& e ) {} // Base cases for recursive templating
