@@ -176,7 +176,6 @@ template< class T >
 std::enable_if_t< !std::is_base_of_v< google::protobuf::Message, T >, void >
 hash_impl( encoder& e, T* t )
 {
-
    to_binary( e, *t );
 }
 
