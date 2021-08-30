@@ -131,12 +131,12 @@ namespace detail {
    {
       auto compressed_key = serialize();
       auto sha256 = hash( multicodec::sha2_256, (char*)compressed_key.data(), compressed_key.size() );
-      auto ripemd160 = hash( multicodec::ripemd_160, (char*)sha256.digest().data(), sha256.digest().size() );
+      auto ripemd160 = hash( multicodec::ripemd_160, sha256 );
       std::array< std::byte, 25 > d;
       d[0] = prefix;
       std::memcpy( d.data() + 1, ripemd160.digest().data(), ripemd160.digest().size() );
       sha256 = hash( multicodec::sha2_256, (char*)d.data(), ripemd160.digest().size() + 1 );
-      sha256 = hash( multicodec::sha2_256, (char*)sha256.digest().data(), sha256.digest().size() );
+      sha256 = hash( multicodec::sha2_256, sha256 );
       std::memcpy( d.data() + ripemd160.digest().size() + 1, sha256.digest().data(), 4 );
       return encode_base58( d );
    }
@@ -144,7 +144,7 @@ namespace detail {
    unsigned int public_key_impl::fingerprint() const
    {
       multihash sha256 = hash( multicodec::sha2_256, (char*)_key.data(), _key.size() );
-      multihash ripemd160 = hash( multicodec::ripemd_160, (char*)sha256.digest().data(), sha256.digest().size() );
+      multihash ripemd160 = hash( multicodec::ripemd_160, sha256 );
       unsigned char* fp = (unsigned char*) ripemd160.digest().data();
       return (fp[0] << 24) | (fp[1] << 16) | (fp[2] << 8) | fp[3];
    }
@@ -411,7 +411,7 @@ std::string private_key::to_wif( std::byte prefix )
    d[0] = prefix;
    std::memcpy( d.data() + 1, _key.data(), _key.size() );
    auto extended_hash = hash( multicodec::sha2_256, (char*)d.data(), _key.size() + 1 );
-   check = *((uint32_t*)hash( multicodec::sha2_256, (char*)extended_hash.digest().data(), extended_hash.digest().size() ).digest().data());
+   check = *((uint32_t*)hash( multicodec::sha2_256, extended_hash ).digest().data());
    std::memcpy( d.data() + _key.size() + 1, (const char*)&check, sizeof(check)  );
    return encode_base58( d );
 }
@@ -423,7 +423,7 @@ private_key private_key::from_wif( const std::string& b58, std::byte prefix )
    KOINOS_ASSERT( d[0] == std::to_integer< char >( prefix ), key_serialization_error, "incorrect WIF prefix" );
    private_key key;
    auto extended_hash = hash( multicodec::sha2_256, d.data(), key._key.size() + 1 );
-   uint32_t check = *((uint32_t*)hash( multicodec::sha2_256, (char*)extended_hash.digest().data(), extended_hash.digest().size() ).digest().data());
+   uint32_t check = *((uint32_t*)hash( multicodec::sha2_256, extended_hash ).digest().data());
 
    KOINOS_ASSERT(
       std::memcmp( (char*)&check, d.data() + key._key.size() + 1, sizeof(check) ) == 0,

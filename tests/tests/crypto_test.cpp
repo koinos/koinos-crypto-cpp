@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <koinos/base58.hpp>
+#include <koinos/bigint.hpp>
 
 #include <koinos/crypto/elliptic.hpp>
 #include <koinos/crypto/multihash.hpp>
@@ -260,6 +261,9 @@ BOOST_AUTO_TEST_CASE( protocol_buffers_test )
 
    auto previous_hash = multihash::from( block_topology.previous() );
    BOOST_CHECK( previous_hash == hash( multicodec::sha2_512, previous_str ) );
+
+   auto mhash2 = hash( multicodec::sha2_256, &block_topology );
+   BOOST_CHECK( mhash == mhash2 );
 }
 
 BOOST_AUTO_TEST_CASE( multihash_serialization )
@@ -315,6 +319,29 @@ BOOST_AUTO_TEST_CASE( multihash_serialization )
    std::stringstream ss;
    ss << mhash;
    BOOST_CHECK( ss.str() == "0yAUCcmZ8hOv_xl5PYKIAjxRL3GHPes=" );
+}
+
+BOOST_AUTO_TEST_CASE( variadic_hash )
+{
+   std::string id_str = "id";
+   std::string previous_str = "previous";
+
+   koinos::block_topology block_topology;
+   block_topology.set_height( 100 );
+   block_topology.set_id( hash( multicodec::sha1, id_str ).as< std::string >() );
+   block_topology.set_previous( hash( multicodec::sha2_512, previous_str ).as< std::string >() );
+
+   std::stringstream ss;
+   block_topology.SerializeToOstream( &ss );
+   ss << "a quick brown fox jumps over the lazy dog";
+
+   koinos::uint256_t x = 0;
+   koinos::to_binary( ss, x );
+
+   auto mhash1 = hash( multicodec::ripemd_160, ss.str() );
+   auto mhash2 = hash( multicodec::ripemd_160, block_topology, std::string( "a quick brown fox jumps over the lazy dog" ), x );
+
+   BOOST_REQUIRE( mhash1 == mhash2 );
 }
 
 BOOST_AUTO_TEST_SUITE_END()
