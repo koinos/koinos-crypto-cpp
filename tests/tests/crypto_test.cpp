@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <koinos/base58.hpp>
+#include <koinos/bigint.hpp>
 
 #include <koinos/crypto/elliptic.hpp>
 #include <koinos/crypto/multihash.hpp>
@@ -334,8 +335,11 @@ BOOST_AUTO_TEST_CASE( variadic_hash )
    block_topology.SerializeToOstream( &ss );
    ss << "a quick brown fox jumps over the lazy dog";
 
+   koinos::uint256_t x = 0;
+   koinos::to_binary( ss, x );
+
    auto mhash1 = hash( multicodec::ripemd_160, ss.str() );
-   auto mhash2 = hash( multicodec::ripemd_160, block_topology, std::string( "a quick brown fox jumps over the lazy dog" ) );
+   auto mhash2 = hash( multicodec::ripemd_160, block_topology, std::string( "a quick brown fox jumps over the lazy dog" ), x );
 
    BOOST_REQUIRE( mhash1 == mhash2 );
 }

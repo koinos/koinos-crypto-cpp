@@ -9,7 +9,6 @@
 #include <google/protobuf/message.h>
 
 #include <koinos/exception.hpp>
-#include <koinos/type_traits.hpp>
 #include <koinos/varint.hpp>
 
 namespace google::protobuf{ class Message; }
@@ -133,10 +132,10 @@ struct encoder final : std::streambuf, std::ostream
       std::size_t _size;
 };
 
-void hash_impl( encoder& e, const std::vector< std::byte >& d );
-void hash_impl( encoder& e, const std::string& s );
-void hash_impl( encoder& e, const char* data, std::size_t len );
-void hash_impl( encoder& e, const multihash& m );
+void hash_c_str( encoder& e, const char* data, std::size_t len );
+void hash_bytes( encoder& e, const std::vector< std::byte >& d );
+void hash_str( encoder& e, const std::string& s );
+void hash_multihash( encoder& e, const multihash& m );
 
 template< class T >
 std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void >
@@ -153,16 +152,31 @@ hash_impl( encoder& e, const T* t )
 }
 
 template< class T >
-std::enable_if_t< has_to_binary_v< T > && !std::is_same_v< T, multihash >, void >
+std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void >
+hash_impl( encoder& e, T* t )
+{
+   t->SerializeToOstream( &e );
+}
+
+template< class T >
+std::enable_if_t< !std::is_base_of_v< google::protobuf::Message, T >, void >
 hash_impl( encoder& e, const T& t )
 {
    to_binary( e, t );
 }
 
 template< class T >
-std::enable_if_t< has_to_binary_v< T > && !std::is_same_v< T, multihash >, void >
+std::enable_if_t< !std::is_base_of_v< google::protobuf::Message, T >, void >
 hash_impl( encoder& e, const T* t )
 {
+   to_binary( e, *t );
+}
+
+template< class T >
+std::enable_if_t< !std::is_base_of_v< google::protobuf::Message, T >, void >
+hash_impl( encoder& e, T* t )
+{
+
    to_binary( e, *t );
 }
 
@@ -176,14 +190,56 @@ inline void hash_n_impl( encoder& e, std::size_t size )
 template< class... Ts >
 void hash_n_impl( encoder& e, const char* data, std::size_t len, Ts... ts )
 {
-   hash_impl( e, data, len );
+   hash_c_str( e, data, len );
    hash_n_impl( e, std::forward< Ts >( ts )... );
 }
 
 template< class... Ts >
 void hash_n_impl( encoder& e, char* data, std::size_t len, Ts... ts )
 {
-   hash_impl( e, data, len );
+   hash_c_str( e, data, len );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, const multihash& m, Ts... ts )
+{
+   hash_multihash( e, m );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, multihash&& m, Ts... ts )
+{
+   hash_multihash( e, m );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, const std::vector< std::byte >& d, Ts... ts )
+{
+   hash_bytes( e, d );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, std::vector< std::byte >&& d, Ts... ts )
+{
+   hash_bytes( e, d );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, const std::string& s, Ts... ts )
+{
+   hash_str( e, s );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, std::string&& s, Ts... ts )
+{
+   hash_str( e, s );
    hash_n_impl( e, std::forward< Ts >( ts )... );
 }
 

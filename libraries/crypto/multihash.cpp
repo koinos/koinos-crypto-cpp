@@ -207,24 +207,24 @@ multihash encoder::get_hash()
    return multihash( _code, std::move( v ) );
 }
 
-void hash_impl( encoder& e, const std::vector< std::byte >& d )
+void hash_bytes( encoder& e, const std::vector< std::byte >& d )
 {
-   hash_impl( e, reinterpret_cast< const char * >( d.data() ), d.size() );
+   hash_c_str( e, reinterpret_cast< const char * >( d.data() ), d.size() );
 }
 
-void hash_impl( encoder& e, const std::string& s )
+void hash_str( encoder& e, const std::string& s )
 {
-   hash_impl( e, s.data(), s.size() );
+   hash_c_str( e, s.data(), s.size() );
 }
 
-void hash_impl( encoder& e, const char* data, std::size_t len )
+void hash_c_str( encoder& e, const char* data, std::size_t len )
 {
    e.write( data, len );
 }
 
-void hash_impl( encoder& e, const multihash& m )
+void hash_multihash( encoder& e, const multihash& m )
 {
-   hash_impl( e, (const char*)m.digest().data(), m.digest().size() );
+   hash_c_str( e, (const char*)m.digest().data(), m.digest().size() );
 }
 
 } // detail
