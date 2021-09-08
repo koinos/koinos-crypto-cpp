@@ -44,6 +44,8 @@ enum class multicodec : std::uint64_t
 
 using digest_type = std::vector< std::byte >;
 
+enum class digest_size : std::size_t {};
+
 class multihash
 {
 public:
@@ -55,9 +57,9 @@ public:
    const digest_type&   digest() const;
    bool                 is_zero() const;
 
-   static std::size_t   standard_size( multicodec id );
-   static multihash     zero( multicodec id, std::size_t size = 0 );
-   static multihash     empty( multicodec id, std::size_t size = 0 );
+   static digest_size   standard_size( multicodec id );
+   static multihash     zero( multicodec id, digest_size size = digest_size( 0 ) );
+   static multihash     empty( multicodec id, digest_size size = digest_size( 0 ) );
 
    multihash& operator =( const multihash& rhs );
 
@@ -181,9 +183,9 @@ hash_impl( encoder& e, T* t )
 
 inline void hash_n_impl( encoder& e ) {} // Base cases for recursive templating
 
-inline void hash_n_impl( encoder& e, std::size_t size )
+inline void hash_n_impl( encoder& e, digest_size size )
 {
-   e.set_size( size );
+   e.set_size( std::size_t( size ) );
 }
 
 template< class... Ts >
@@ -262,7 +264,7 @@ void hash_n_impl( encoder& e, T&& t, Ts... ts )
  * - Protobuf generated types (google::protobuf::Message)
  * - Types implementing `to_binary( std::ostream&, const T& )`
  *
- * If the last parameter is std::size_t, a custom hash size will be used.
+ * If the last parameter is digest_size, a custom hash size will be used.
  * Effectively, the function's signature is hash( multicodec code, Ts... ts, size_t size = 0 )
  */
 template< class... Ts >
@@ -274,6 +276,8 @@ multihash hash( multicodec code, Ts... ts )
 }
 
 std::ostream& operator<<( std::ostream&, const crypto::multihash& );
+
+void to_json( nlohmann::json&, const multihash& );
 
 } // crypto
 

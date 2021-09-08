@@ -319,6 +319,15 @@ BOOST_AUTO_TEST_CASE( multihash_serialization )
    std::stringstream ss;
    ss << mhash;
    BOOST_CHECK( ss.str() == "0yAUCcmZ8hOv_xl5PYKIAjxRL3GHPes=" );
+
+   try {
+      KOINOS_THROW( koinos::exception, "test multihash in exception: ${mh}", ("mh", mhash ) );
+      BOOST_REQUIRE( false );
+   }
+   catch( const koinos::exception& e )
+   {
+      BOOST_REQUIRE( e.what() == std::string( "test multihash in exception: 0yAUCcmZ8hOv_xl5PYKIAjxRL3GHPes=" ) );
+   }
 }
 
 BOOST_AUTO_TEST_CASE( variadic_hash )

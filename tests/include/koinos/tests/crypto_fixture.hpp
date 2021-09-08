@@ -48,7 +48,7 @@ struct crypto_fixture
          static_cast< std::underlying_type_t< koinos::crypto::multicodec > >( code ),
          static_cast< std::underlying_type_t< koinos::crypto::multicodec > >( mh1.code() )
       );
-      BOOST_CHECK_EQUAL( koinos::crypto::multihash::standard_size( code ), mh1.digest().size() );
+      BOOST_CHECK_EQUAL( std::size_t( koinos::crypto::multihash::standard_size( code ) ), mh1.digest().size() );
    }
 
    void test_big( koinos::crypto::multicodec code, const std::string& expected )
@@ -65,6 +65,6 @@ struct crypto_fixture
          static_cast< std::underlying_type_t< koinos::crypto::multicodec > >( code ),
          static_cast< std::underlying_type_t< koinos::crypto::multicodec > >( mh1.code() )
       );
-      BOOST_CHECK_EQUAL( koinos::crypto::multihash::standard_size( code ), mh1.digest().size() );
+      BOOST_CHECK_EQUAL( std::size_t( koinos::crypto::multihash::standard_size( code ) ), mh1.digest().size() );
    }
 };

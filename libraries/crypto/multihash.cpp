@@ -24,36 +24,36 @@ const digest_type& multihash::digest() const
    return _digest;
 }
 
-std::size_t multihash::standard_size( multicodec id )
+digest_size multihash::standard_size( multicodec id )
 {
    switch( id )
    {
       case multicodec::sha1:
-         return 20;
+         return digest_size( 20 );
       case multicodec::sha2_256:
-         return 32;
+         return digest_size( 32 );
       case multicodec::sha2_512:
-         return 64;
+         return digest_size( 64 );
       case multicodec::ripemd_160:
-         return 20;
+         return digest_size( 20 );
       default:
          KOINOS_ASSERT( false, unknown_hash_algorithm, "unknown hash code ${i}", ("i", static_cast< std::underlying_type_t< multicodec > >( id )) );
    }
 }
 
-multihash multihash::zero( multicodec code, std::size_t size )
+multihash multihash::zero( multicodec code, digest_size size )
 {
    digest_type result;
 
-   if ( !size )
+   if ( size == digest_size( 0 ) )
       size = multihash::standard_size( code );
 
-   result.resize( size );
-   std::memset( result.data(), 0, size );
+   result.resize( std::size_t( size ) );
+   std::memset( result.data(), 0, std::size_t( size ) );
    return multihash( code, result );
 }
 
-multihash multihash::empty( multicodec code, std::size_t size )
+multihash multihash::empty( multicodec code, digest_size size )
 {
    char c;
    return hash( code, &c, std::size_t( 0 ), size );
@@ -176,7 +176,7 @@ void encoder::set_size( std::size_t size )
    } );
 
   if ( size == 0 )
-      size = multihash::standard_size( _code );
+      size = std::size_t( multihash::standard_size( _code ) );
 
    KOINOS_ASSERT(
       size <= MAX_HASH_SIZE,
@@ -236,6 +236,15 @@ std::ostream& operator<<( std::ostream& out, const crypto::multihash& mh )
    std::string base64;
    google::protobuf::WebSafeBase64EscapeWithPadding( bin.str(), &base64 );
    return out << base64;
+}
+
+void to_json( nlohmann::json& j, const multihash& mh )
+{
+   std::stringstream bin;
+   to_binary( bin, mh );
+   std::string base64;
+   google::protobuf::WebSafeBase64EscapeWithPadding( bin.str(), &base64 );
+   j = base64;
 }
 
 } // crypto

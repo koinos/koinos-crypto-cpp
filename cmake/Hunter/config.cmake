@@ -28,8 +28,8 @@ hunter_config(koinos_util
 )
 
 hunter_config(koinos_exception
-   URL  "https://github.com/koinos/koinos-exception-cpp/archive/77f5b1cf0877714d4214bab3a7eeab45ad33df54.tar.gz"
-   SHA1 "b974a3ef9133c82d144882ad395754c98ee6333c"
+   URL  "https://github.com/koinos/koinos-exception-cpp/archive/071924986460c492d98b14d108d64da8d83c4593.tar.gz"
+   SHA1 "5b7af085047be840e3894e55fee68a852866661f"
    CMAKE_ARGS
       BUILD_TESTS=OFF
 )
