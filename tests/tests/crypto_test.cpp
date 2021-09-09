@@ -230,6 +230,17 @@ BOOST_AUTO_TEST_CASE( merkle )
    BOOST_CHECK_EQUAL( *tree.root()->left()->right()->right()->right()->value(), values[7] ); // lazy
    BOOST_CHECK_EQUAL( *tree.root()->right()->value()                          , values[8] ); // dog
 
+   std::vector< multihash > v( values.size() );
+   std::transform(
+      std::begin( values ),
+      std::end( values ),
+      std::begin( v ),
+      [] ( const std::string& s ) { return hash( multicodec::sha2_256, s ); }
+   );
+
+   auto multihash_tree = merkle_tree( multicodec::sha2_256, v );
+   BOOST_CHECK_EQUAL( multihash_tree.root()->hash(), tree.root()->hash() );
+
    auto mtree = merkle_tree( multicodec::sha2_256, std::vector< std::string >() );
    BOOST_CHECK( mtree.root()->hash() == multihash::empty( multicodec::sha2_256 ) );
    BOOST_CHECK( mtree.root()->hash() != multihash::zero( multicodec::sha2_256 ) );

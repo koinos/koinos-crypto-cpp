@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 
 #include <koinos/crypto/multihash.hpp>
 
@@ -10,37 +11,45 @@ template < class T >
 class merkle_node
 {
 public:
-   merkle_node( multicodec code ) : _left( nullptr ), _right( nullptr ), _value( nullptr )
+   merkle_node( multicodec code ) : _left( nullptr ), _right( nullptr )
    {
       _hash = crypto::multihash::empty( code );
    }
 
-   merkle_node( multicodec code, const T& value ) : _left( nullptr ), _right( nullptr ), _value( std::make_shared< T >( value ) )
+   merkle_node( multicodec code, const T& value ) : _left( nullptr ), _right( nullptr )
    {
-      _hash = crypto::hash( code, value );
+      // If we're given multihashes as leaves, we don't rehash them or store a value
+      if constexpr ( std::is_same_v< std::decay_t< T >, multihash > )
+      {
+         _hash = value;
+      }
+      else
+      {
+         _hash  = crypto::hash( code, value );
+         _value = value;
+      }
    }
 
    merkle_node( multicodec code, std::unique_ptr< merkle_node< T > > l, std::unique_ptr< merkle_node< T > > r ) :
       _left( std::move( l ) ),
-      _right( std::move( r ) ),
-      _value( nullptr )
+      _right( std::move( r ) )
    {
       std::vector< std::byte > buffer;
       std::copy( left()->hash().digest().begin(), left()->hash().digest().end(), std::back_inserter( buffer ) );
       std::copy( right()->hash().digest().begin(), right()->hash().digest().end(), std::back_inserter( buffer ) );
 
-      _hash = crypto::hash( code, reinterpret_cast< const char* >( buffer.data() ), buffer.size() );
+      _hash = crypto::hash( code, buffer );
    }
 
    const multihash&                           hash() const { return _hash; }
    const std::unique_ptr< merkle_node< T > >& left() const { return _left; }
    const std::unique_ptr< merkle_node< T > >& right() const { return _right; }
-   const std::shared_ptr< T >&                value() const { return _value; }
+   const std::optional< T >&                  value() const { return _value; }
 
 private:
    std::unique_ptr< merkle_node< T > >  _left, _right;
    multihash                            _hash;
-   const std::shared_ptr< T >           _value;
+   std::optional< T >                   _value;
 };
 
 template < class T >
