@@ -1,9 +1,10 @@
 #pragma once
 
+#include <koinos/binary.hpp>
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/exception.hpp>
 
-namespace koinos::crypto {
+namespace koinos { namespace crypto {
 
    using recoverable_signature = std::array< std::byte, 65 >; ///< A 65 byte recoverable ECDSA siganture
    using compressed_public_key = std::array< std::byte, 33 >; ///< The 33 byte compressed ECDSA public key
@@ -66,12 +67,7 @@ namespace koinos::crypto {
             return !(a == b);
          }
 
-         // Allows to convert current public key object into base58 number.
-         std::string to_base58() const;
-         static std::string to_base58( const compressed_public_key &key );
-         static public_key from_base58( const std::string& b58 );
-
-         std::string to_address( std::byte prefix = std::byte{ 0x00 } ) const;
+         std::string to_address_bytes( std::byte prefix = std::byte{ 0x00 } )const;
 
          unsigned int fingerprint() const;
 
@@ -141,4 +137,12 @@ namespace koinos::crypto {
          private_key_secret _key;
    };
 
-} // koinos::crypto
+} // crypto
+
+template<>
+void to_binary< crypto::public_key >( std::ostream& s, const crypto::public_key& k );
+
+template<>
+void from_binary< crypto::public_key >( std::istream& s, crypto::public_key& k );
+
+} // koinos
