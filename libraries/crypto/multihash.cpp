@@ -1,13 +1,9 @@
 #include <koinos/crypto/multihash.hpp>
 
-#define HASH_OFFSET (8)
-#define HASH_MASK (~uint64_t(0)<<8)
-#define SIZE_MASK ~HASH_MASK
+#include <koinos/util.hpp>
 
 #include <iostream>
 #include <map>
-
-#include <google/protobuf/stubs/strutil.h>
 
 namespace koinos { namespace crypto {
 
@@ -233,9 +229,7 @@ std::ostream& operator<<( std::ostream& out, const crypto::multihash& mh )
 {
    std::stringstream bin;
    to_binary( bin, mh );
-   std::string base64;
-   google::protobuf::WebSafeBase64EscapeWithPadding( bin.str(), &base64 );
-   return out << base64;
+   return out << to_hex( bin.str() );
 }
 
 void to_json( nlohmann::json& j, const multihash& mh )

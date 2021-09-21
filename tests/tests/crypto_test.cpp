@@ -10,6 +10,8 @@
 
 #include <koinos/bigint.hpp>
 
+#include <koinos/conversion.hpp>
+
 #include <koinos/crypto/elliptic.hpp>
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/crypto/merkle_tree.hpp>
@@ -229,6 +231,17 @@ BOOST_AUTO_TEST_CASE( merkle )
    BOOST_CHECK_EQUAL( *tree.root()->left()->right()->right()->right()->value(), values[7] ); // lazy
    BOOST_CHECK_EQUAL( *tree.root()->right()->value()                          , values[8] ); // dog
 
+   std::vector< multihash > v( values.size() );
+   std::transform(
+      std::begin( values ),
+      std::end( values ),
+      std::begin( v ),
+      [] ( const std::string& s ) { return hash( multicodec::sha2_256, s ); }
+   );
+
+   auto multihash_tree = merkle_tree( multicodec::sha2_256, v );
+   BOOST_CHECK_EQUAL( multihash_tree.root()->hash(), tree.root()->hash() );
+
    auto mtree = merkle_tree( multicodec::sha2_256, std::vector< std::string >() );
    BOOST_CHECK( mtree.root()->hash() == multihash::empty( multicodec::sha2_256 ) );
    BOOST_CHECK( mtree.root()->hash() != multihash::zero( multicodec::sha2_256 ) );
@@ -241,8 +254,8 @@ BOOST_AUTO_TEST_CASE( protocol_buffers_test )
 
    koinos::block_topology block_topology;
    block_topology.set_height( 100 );
-   block_topology.set_id( hash( multicodec::sha1, id_str ).as< std::string >() );
-   block_topology.set_previous( hash( multicodec::sha2_512, previous_str ).as< std::string >() );
+   block_topology.set_id( koinos::converter::as< std::string>( hash( multicodec::sha1, id_str ) ) );
+   block_topology.set_previous( koinos::converter::as< std::string>( hash( multicodec::sha2_512, previous_str ) ) );
 
    auto mhash = hash( multicodec::sha2_256, block_topology );
 
@@ -255,10 +268,10 @@ BOOST_AUTO_TEST_CASE( protocol_buffers_test )
 
    BOOST_CHECK( hash( multicodec::sha2_256, bytes ) == mhash );
 
-   auto id_hash = multihash::from( block_topology.id() );
+   auto id_hash = koinos::converter::to< multihash >( block_topology.id() );
    BOOST_CHECK( id_hash == hash( multicodec::sha1, id_str ) );
 
-   auto previous_hash = multihash::from( block_topology.previous() );
+   auto previous_hash = koinos::converter::to< multihash >( block_topology.previous() );
    BOOST_CHECK( previous_hash == hash( multicodec::sha2_512, previous_str ) );
 
    auto mhash2 = hash( multicodec::sha2_256, &block_topology );
@@ -276,48 +289,9 @@ BOOST_AUTO_TEST_CASE( multihash_serialization )
    koinos::from_binary( stream, tmp );
    BOOST_CHECK( mhash == tmp );
 
-   tmp = multihash::from( mhash.as< std::vector< std::byte > >() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< std::vector< char > >() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< std::vector< unsigned char > >() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< std::vector< uint8_t > >() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< std::deque< std::byte > >() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< std::deque< char > >() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< std::deque< unsigned char > >() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< std::deque< uint8_t > >() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< std::list< std::byte > >() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< std::list< char > >() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< std::list< unsigned char > >() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< std::list< uint8_t > >() );
-   BOOST_CHECK( mhash == tmp );
-
-   tmp = multihash::from( mhash.as< std::string >() );
-   BOOST_CHECK( mhash == tmp );
-
    std::stringstream ss;
    ss << mhash;
-   BOOST_CHECK( ss.str() == "0yAUCcmZ8hOv_xl5PYKIAjxRL3GHPes=" );
+   BOOST_CHECK( ss.str() == "0xd3201409c999f213afff19793d8288023c512f71873deb" );
 
    try {
       KOINOS_THROW( koinos::exception, "test multihash in exception: ${mh}", ("mh", mhash ) );
@@ -325,7 +299,7 @@ BOOST_AUTO_TEST_CASE( multihash_serialization )
    }
    catch( const koinos::exception& e )
    {
-      BOOST_REQUIRE( e.what() == std::string( "test multihash in exception: 0yAUCcmZ8hOv_xl5PYKIAjxRL3GHPes=" ) );
+      BOOST_REQUIRE( e.what() == std::string( "test multihash in exception: 0xd3201409c999f213afff19793d8288023c512f71873deb" ) );
    }
 }
 
@@ -336,8 +310,8 @@ BOOST_AUTO_TEST_CASE( variadic_hash )
 
    koinos::block_topology block_topology;
    block_topology.set_height( 100 );
-   block_topology.set_id( hash( multicodec::sha1, id_str ).as< std::string >() );
-   block_topology.set_previous( hash( multicodec::sha2_512, previous_str ).as< std::string >() );
+   block_topology.set_id( koinos::converter::as< std::string>( hash( multicodec::sha1, id_str ) ) );
+   block_topology.set_previous( koinos::converter::as< std::string>( hash( multicodec::sha2_512, previous_str ) ) );
 
    std::stringstream ss;
    block_topology.SerializeToOstream( &ss );
