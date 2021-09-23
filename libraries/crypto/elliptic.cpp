@@ -1,4 +1,5 @@
 #include <koinos/base58.hpp>
+#include <koinos/conversion.hpp>
 #include <koinos/crypto/elliptic.hpp>
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/crypto/openssl.hpp>
@@ -9,7 +10,7 @@
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
 
-namespace koinos::crypto {
+namespace koinos { namespace crypto {
 
 using koinos::exception;
 using namespace boost::multiprecision::literals;
@@ -65,8 +66,7 @@ namespace detail {
          return std::memcmp( a._key.data(), b._key.data(), sizeof(public_key_data) ) == 0;
       }
 
-      std::string to_base58() const;
-      std::string to_address( std::byte prefix ) const;
+      std::string to_address_bytes( std::byte prefix ) const;
 
       unsigned int fingerprint() const;
 
@@ -120,14 +120,7 @@ namespace detail {
       return _key != empty_pub();
    }
 
-   std::string public_key_impl::to_base58() const
-   {
-      KOINOS_ASSERT( _key != empty_pub(), key_serialization_error, "Cannot serialize an empty key" );
-      compressed_public_key cpk = serialize();
-      return public_key::to_base58( cpk );
-   }
-
-   std::string public_key_impl::to_address( std::byte prefix )const
+   std::string public_key_impl::to_address_bytes( std::byte prefix )const
    {
       auto compressed_key = serialize();
       auto sha256 = hash( multicodec::sha2_256, (char*)compressed_key.data(), compressed_key.size() );
@@ -138,7 +131,7 @@ namespace detail {
       sha256 = hash( multicodec::sha2_256, (char*)d.data(), ripemd160.digest().size() + 1 );
       sha256 = hash( multicodec::sha2_256, sha256 );
       std::memcpy( d.data() + ripemd160.digest().size() + 1, sha256.digest().data(), 4 );
-      return encode_base58( d );
+      return converter::as< std::string >( d );
    }
 
    unsigned int public_key_impl::fingerprint() const
@@ -242,42 +235,9 @@ bool operator ==( const public_key& a, const public_key& b )
    return *a._my == *b._my;
 }
 
-std::string public_key::to_base58() const
+std::string public_key::to_address_bytes( std::byte prefix ) const
 {
-   return _my->to_base58();
-}
-
-std::string public_key::to_base58( const compressed_public_key &key )
-{
-   uint32_t check = *((uint32_t*)hash( multicodec::sha2_256, (char*)key.data(), key.size() ).digest().data());
-   assert( key.size() + sizeof(check) == 37 );
-   std::array< std::byte, 37 > d;
-   std::memcpy( d.data(), key.data(), key.size() );
-   std::memcpy( d.begin() + key.size(), (const char*)&check, sizeof(check) );
-   return encode_base58( d );
-}
-
-public_key public_key::from_base58( const std::string& b58 )
-{
-   std::array< std::byte, 37 > d;
-   decode_base58( b58, d );
-
-   compressed_public_key key;
-   uint32_t check = *((uint32_t*)hash( multicodec::sha2_256, (char*)d.data(), key.size() ).digest().data());
-
-   KOINOS_ASSERT(
-      std::memcmp( (char*)&check, d.data() + sizeof( key ),
-      sizeof(check) ) == 0,
-      key_serialization_error, "invalid checksum"
-   );
-
-   std::memcpy( key.data(), d.data(), sizeof( key ) );
-   return deserialize( key );
-}
-
-std::string public_key::to_address( std::byte prefix ) const
-{
-   return _my->to_address( prefix );
+   return _my->to_address_bytes( prefix );
 }
 
 unsigned int public_key::fingerprint() const
@@ -435,4 +395,21 @@ private_key private_key::from_wif( const std::string& b58, std::byte prefix )
    return key;
 }
 
-} // koinos::crypto
+} // crypto
+
+template<>
+void to_binary< crypto::public_key >( std::ostream& s, const crypto::public_key& k )
+{
+   auto cpk = k.serialize();
+   s.write( reinterpret_cast< const char* >( cpk.data() ), cpk.size() );
+}
+
+template<>
+void from_binary< crypto::public_key >( std::istream& s, crypto::public_key& k )
+{
+   crypto::compressed_public_key cpk;
+   s.readsome( reinterpret_cast< char* >( cpk.data() ), cpk.size() );
+   k.deserialize( cpk );
+}
+
+} // koinos

@@ -8,7 +8,6 @@
 #include <sstream>
 #include <vector>
 
-#include <koinos/base58.hpp>
 #include <koinos/bigint.hpp>
 
 #include <koinos/conversion.hpp>
@@ -88,10 +87,6 @@ BOOST_AUTO_TEST_CASE( ecc )
       public_key  pub1  = pub.add( h2 );
       private_key priv1 = private_key::generate_from_seed(h, h2);
 
-      std::string b58 = pub1.to_base58();
-      public_key pub2 = public_key::from_base58(b58);
-      BOOST_CHECK( pub1 == pub2 );
-
       auto sig = priv.sign_compact( h );
       auto recover = public_key::recover( sig, h );
       BOOST_CHECK( recover == pub );
@@ -130,9 +125,13 @@ BOOST_AUTO_TEST_CASE( public_address )
    std::string private_wif = "5J1F7GHadZG3sCCKHCwg8Jvys9xUbFsjLnGec4H125Ny1V9nR6V";
    auto priv_key = private_key::from_wif( private_wif );
    auto pub_key = priv_key.get_public_key();
-   auto address = pub_key.to_address();
+   auto address = pub_key.to_address_bytes();
 
-   BOOST_REQUIRE_EQUAL( address, "1PMycacnJaSqwwJqjawXBErnLsZ7RkXUAs" );
+   const unsigned char bytes[] = { 0x00, 0xf5, 0x4a, 0x58, 0x51, 0xe9, 0x37, 0x2b, 0x87, 0x81, 0x0a, 0x8e, 0x60,
+                          0xcd, 0xd2, 0xe7, 0xcf, 0xd8, 0x0b, 0x6e, 0x31, 0xc7, 0xf1, 0x8f, 0xe8 };
+   std::string address_bytes( reinterpret_cast< const char* >( bytes ), sizeof( bytes ) );
+
+   BOOST_REQUIRE_EQUAL( address, address_bytes );
 }
 
 BOOST_AUTO_TEST_CASE( zerohash )
