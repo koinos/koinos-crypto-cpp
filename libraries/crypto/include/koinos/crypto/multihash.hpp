@@ -1,147 +1,251 @@
 #pragma once
-#include <koinos/exception.hpp>
 
-#include <koinos/pack/rt/basetypes.hpp>
-#include <koinos/pack/rt/binary.hpp>
+#include <cstddef>
+#include <ostream>
+#include <sstream>
 
 #include <openssl/evp.h>
 
-/* Multicodec IDs for hash algorithms
- * https://github.com/multiformats/multicodec/blob/master/table.csv
- */
-#define CRYPTO_SHA1_ID        uint64_t(0x11)
-#define CRYPTO_SHA2_256_ID    uint64_t(0x12)
-#define CRYPTO_SHA2_512_ID    uint64_t(0x13)
-#define CRYPTO_RIPEMD160_ID   uint64_t(0x1053)
+#include <google/protobuf/message.h>
 
-namespace koinos::crypto {
+#include <koinos/exception.hpp>
+#include <koinos/varint.hpp>
+
+namespace google::protobuf{ class Message; }
+
+namespace koinos {
+
+namespace crypto { class multihash; }
+
+template<>
+void to_binary< crypto::multihash >( std::ostream& s, const crypto::multihash& m );
+
+template<>
+void from_binary< crypto::multihash >( std::istream& s, crypto::multihash& v );
+
+namespace crypto {
 
 KOINOS_DECLARE_EXCEPTION( unknown_hash_algorithm );
 KOINOS_DECLARE_EXCEPTION( multihash_size_mismatch );
 KOINOS_DECLARE_EXCEPTION( multihash_size_limit_exceeded );
 
+/*
+ * Multicodec IDs for hash algorithms
+ * https://github.com/multiformats/multicodec/blob/master/table.csv
+ */
+enum class multicodec : std::uint64_t
+{
+   identity   = 0x00,
+   sha1       = 0x11,
+   sha2_256   = 0x12,
+   sha2_512   = 0x13,
+   ripemd_160 = 0x1053
+};
+
+using digest_type = std::vector< std::byte >;
+
+enum class digest_size : std::size_t {};
+
+class multihash
+{
+public:
+   multihash() = default;
+   multihash( multicodec code, const digest_type& digest );
+   multihash( multicodec code, digest_type&& digest );
+
+   multicodec           code() const;
+   const digest_type&   digest() const;
+   bool                 is_zero() const;
+
+   static digest_size   standard_size( multicodec id );
+   static multihash     zero( multicodec id, digest_size size = digest_size( 0 ) );
+   static multihash     empty( multicodec id, digest_size size = digest_size( 0 ) );
+
+   multihash& operator =( const multihash& rhs );
+
+   bool operator==( const multihash &rhs ) const;
+   bool operator!=( const multihash &rhs ) const;
+   bool operator< ( const multihash &rhs ) const;
+   bool operator<=( const multihash &rhs ) const;
+   bool operator> ( const multihash &rhs ) const;
+   bool operator>=( const multihash &rhs ) const;
+
+   friend std::ostream& operator<<( std::ostream&, const multihash& );
+
+private:
+   multicodec  _code = multicodec::identity;
+   digest_type _digest;
+};
+
 namespace detail {
-   template< typename T >
-   void pack_variadic_types( variable_blob& vb, T&& t )
-   {
-      pack::to_variable_blob( vb, std::forward< T >( t ), true );
-   }
 
-   template< typename T, typename... Ts >
-   void pack_variadic_types( variable_blob& vb, T&& t, Ts&&... ts )
-   {
-      pack::to_variable_blob( vb, std::forward< T >( t ), true );
-      pack_variadic_types( vb,std::forward< Ts >( ts )... );
-   }
-}
-
-inline bool multihash_is_zero( const multihash& mh )
+struct encoder final : std::streambuf, std::ostream
 {
-   return std::all_of( mh.digest.begin(), mh.digest.end(), []( char c ) { return (c == 0); } );
-}
-
-inline uint64_t multihash_standard_size( uint64_t id )
-{
-   switch( id )
-   {
-      case CRYPTO_SHA1_ID:
-         return 20;
-      case CRYPTO_SHA2_256_ID:
-         return 32;
-      case CRYPTO_SHA2_512_ID:
-         return 64;
-      case CRYPTO_RIPEMD160_ID:
-         return 20;
-      default:
-         KOINOS_ASSERT( false, unknown_hash_algorithm, "Unknown hash id ${i}", ("i", id) );
-   }
-}
-
-constexpr bool multihash_id_is_known( uint64_t id )
-{
-   switch ( id )
-   {
-      case CRYPTO_SHA1_ID:
-      case CRYPTO_SHA2_256_ID:
-      case CRYPTO_SHA2_512_ID:
-      case CRYPTO_RIPEMD160_ID:
-         return true;
-   }
-   return false;
-}
-
-struct encoder
-{
-   encoder( uint64_t code, uint64_t size = 0 );
+   encoder( multicodec code, std::size_t size = 0 );
+   encoder( const encoder& ) = delete;
+   encoder( encoder&& ) = delete;
    ~encoder();
 
-   void write( const char* d, size_t len );
-   void put( char c ) { write( &c, 1 ); }
+   std::streamsize xsputn( const char* s, std::streamsize n ) override;
+
+   void write( const char* d, std::size_t len );
+   void put( char c );
    void reset();
-   void get_result( variable_blob& v );
-   inline void get_result( multihash& mh )
-   {
-      get_result( mh.digest );
-      mh.id = _code;
-   }
+   void set_size( std::size_t size = 0 );
+   multihash get_hash();
 
    private:
       const EVP_MD* md = nullptr;
       EVP_MD_CTX* mdctx = nullptr;
-      uint64_t _code, _size;
+      multicodec _code;
+      std::size_t _size;
 };
 
-template< typename... Types >
-inline multihash hash_n( uint64_t code, Types&&... vars )
+void hash_c_str( encoder& e, const char* data, std::size_t len );
+void hash_bytes( encoder& e, const std::vector< std::byte >& d );
+void hash_str( encoder& e, const std::string& s );
+void hash_multihash( encoder& e, const multihash& m );
+
+template< class T >
+std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void >
+hash_impl( encoder& e, const T& t )
 {
-   multihash result;
-   encoder e( code );
-
-   variable_blob vb;
-   detail::pack_variadic_types( vb, std::forward< Types >( vars )... );
-
-   koinos::pack::to_binary( e, vb );
-   e.get_result( result );
-   return result;
+   t.SerializeToOstream( &e );
 }
 
-template< typename T >
-inline multihash hash( uint64_t code, const T& t, uint64_t size = 0 )
+template< class T >
+std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void >
+hash_impl( encoder& e, const T* t )
 {
-   multihash result;
-   encoder e( code, size );
-   koinos::pack::to_binary( e, t );
-   e.get_result( result );
-   return result;
+   t->SerializeToOstream( &e );
 }
 
-template< typename T >
-multihash hash_like( const multihash& old, const T& t )
+template< class T >
+std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void >
+hash_impl( encoder& e, T* t )
 {
-   return hash< T >( old.id, t, old.digest.size() );
+   t->SerializeToOstream( &e );
 }
 
-multihash hash_str( uint64_t code, const char* data, size_t len, uint64_t size = 0 );
-multihash hash_str_like( const multihash& old, const char* data, size_t len );
+template< class T >
+std::enable_if_t< !std::is_base_of_v< google::protobuf::Message, T >, void >
+hash_impl( encoder& e, const T& t )
+{
+   to_binary( e, t );
+}
 
-multihash hash_blob( uint64_t code, const variable_blob& value, uint64_t size = 0 );
-multihash hash_blob_like( const multihash& old, const variable_blob& value );
+template< class T >
+std::enable_if_t< !std::is_base_of_v< google::protobuf::Message, T >, void >
+hash_impl( encoder& e, const T* t )
+{
+   to_binary( e, *t );
+}
 
-multihash zero_hash( uint64_t code, uint64_t size = 0 );
-multihash zero_hash_like( const multihash& old );
+template< class T >
+std::enable_if_t< !std::is_base_of_v< google::protobuf::Message, T >, void >
+hash_impl( encoder& e, T* t )
+{
+   to_binary( e, *t );
+}
 
-multihash empty_hash( uint64_t code, uint64_t size = 0 );
-multihash empty_hash_like( const multihash& old );
+inline void hash_n_impl( encoder& e ) {} // Base cases for recursive templating
 
-multihash merkle_hash( uint64_t code, const std::vector< variable_blob >& values, uint64_t size = 0 );
-multihash merkle_hash_like( const multihash& old, const std::vector< variable_blob >& values );
+inline void hash_n_impl( encoder& e, digest_size size )
+{
+   e.set_size( std::size_t( size ) );
+}
 
-/**
- * Compute Merkle root given leaf hash values.
- * Computation is in-place, result is stored in hashes[0].
- * Other hashes values are destroyed.
+template< class... Ts >
+void hash_n_impl( encoder& e, const char* data, std::size_t len, Ts... ts )
+{
+   hash_c_str( e, data, len );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, char* data, std::size_t len, Ts... ts )
+{
+   hash_c_str( e, data, len );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, const multihash& m, Ts... ts )
+{
+   hash_multihash( e, m );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, multihash&& m, Ts... ts )
+{
+   hash_multihash( e, m );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, const std::vector< std::byte >& d, Ts... ts )
+{
+   hash_bytes( e, d );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, std::vector< std::byte >&& d, Ts... ts )
+{
+   hash_bytes( e, d );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, const std::string& s, Ts... ts )
+{
+   hash_str( e, s );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class... Ts >
+void hash_n_impl( encoder& e, std::string&& s, Ts... ts )
+{
+   hash_str( e, s );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< class T, class... Ts >
+void hash_n_impl( encoder& e, T&& t, Ts... ts )
+{
+   hash_impl( e, t );
+   hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+} // detail
+
+/*
+ * hash() hashes a series of objects in to a single hash.
+ *
+ * Types currently supported:
+ *
+ * - std::string
+ * - std::vector< std::byte >
+ * - C string (const char*, size_t)
+ * - Protobuf generated types (google::protobuf::Message)
+ * - Types implementing `to_binary( std::ostream&, const T& )`
+ *
+ * If the last parameter is digest_size, a custom hash size will be used.
+ * Effectively, the function's signature is hash( multicodec code, Ts... ts, size_t size = 0 )
  */
-void merkle_hash_leaves( std::vector< multihash >& hashes, uint64_t code, uint64_t size = 0 );
-void merkle_hash_leaves_like( std::vector< multihash >& hashes, const multihash& old );
+template< class... Ts >
+multihash hash( multicodec code, Ts... ts )
+{
+   detail::encoder e( code );
+   detail::hash_n_impl( e, std::forward< Ts >( ts )... );
+   return e.get_hash();
+}
 
-} // koinos::crypto
+std::ostream& operator<<( std::ostream&, const crypto::multihash& );
+
+void to_json( nlohmann::json&, const multihash& );
+
+} // crypto
+
+} // koinos

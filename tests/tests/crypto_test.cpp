@@ -1,85 +1,94 @@
 #include <boost/test/unit_test.hpp>
 
+#include <algorithm>
+#include <deque>
+#include <iostream>
+#include <iterator>
+#include <list>
+#include <sstream>
+#include <vector>
+
+#include <koinos/bigint.hpp>
+
+#include <koinos/conversion.hpp>
+
 #include <koinos/crypto/elliptic.hpp>
+#include <koinos/crypto/multihash.hpp>
+#include <koinos/crypto/merkle_tree.hpp>
+
+#include <koinos/common.pb.h>
 
 #include <koinos/tests/crypto_fixture.hpp>
 
-#include <algorithm>
-#include <iostream>
-#include <iterator>
-#include <vector>
+using namespace koinos::crypto;
 
 BOOST_FIXTURE_TEST_SUITE( crypto_tests, crypto_fixture )
 
 BOOST_AUTO_TEST_CASE( ripemd160_test )
 {
-   test( CRYPTO_RIPEMD160_ID,  TEST1, "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc" );
-   test( CRYPTO_RIPEMD160_ID,  TEST2, "9c1185a5c5e9fc54612808977ee8f548b2258d31" );
-   test( CRYPTO_RIPEMD160_ID,  TEST3, "12a053384a9c0c88e405a06c27dcf49ada62eb2b" );
-   test( CRYPTO_RIPEMD160_ID,  TEST4, "6f3fa39b6b503c384f919a49a7aa5c2c08bdfb45" );
-   test( CRYPTO_RIPEMD160_ID,  TEST5, "52783243c1697bdbe16d37f97f68f08325dc1528" );
-   test_big( CRYPTO_RIPEMD160_ID,  "29b6df855772aa9a95442bf83b282b495f9f6541" );
+   test( multicodec::ripemd_160, TEST1, "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc" );
+   test( multicodec::ripemd_160, TEST2, "9c1185a5c5e9fc54612808977ee8f548b2258d31" );
+   test( multicodec::ripemd_160, TEST3, "12a053384a9c0c88e405a06c27dcf49ada62eb2b" );
+   test( multicodec::ripemd_160, TEST4, "6f3fa39b6b503c384f919a49a7aa5c2c08bdfb45" );
+   test( multicodec::ripemd_160, TEST5, "52783243c1697bdbe16d37f97f68f08325dc1528" );
+   test_big( multicodec::ripemd_160, "29b6df855772aa9a95442bf83b282b495f9f6541" );
 }
 
 BOOST_AUTO_TEST_CASE( sha1_test )
 {
-   test( CRYPTO_SHA1_ID,  TEST1, "a9993e364706816aba3e25717850c26c9cd0d89d" );
-   test( CRYPTO_SHA1_ID,  TEST2, "da39a3ee5e6b4b0d3255bfef95601890afd80709" );
-   test( CRYPTO_SHA1_ID,  TEST3, "84983e441c3bd26ebaae4aa1f95129e5e54670f1" );
-   test( CRYPTO_SHA1_ID,  TEST4, "a49b2446a02c645bf419f995b67091253a04a259" );
-   test( CRYPTO_SHA1_ID,  TEST5, "34aa973cd4c4daa4f61eeb2bdbad27316534016f" );
-   test_big( CRYPTO_SHA1_ID,  "7789f0c9ef7bfc40d93311143dfbe69e2017f592" );
+   test( multicodec::sha1, TEST1, "a9993e364706816aba3e25717850c26c9cd0d89d" );
+   test( multicodec::sha1, TEST2, "da39a3ee5e6b4b0d3255bfef95601890afd80709" );
+   test( multicodec::sha1, TEST3, "84983e441c3bd26ebaae4aa1f95129e5e54670f1" );
+   test( multicodec::sha1, TEST4, "a49b2446a02c645bf419f995b67091253a04a259" );
+   test( multicodec::sha1, TEST5, "34aa973cd4c4daa4f61eeb2bdbad27316534016f" );
+   test_big( multicodec::sha1, "7789f0c9ef7bfc40d93311143dfbe69e2017f592" );
 }
 
 BOOST_AUTO_TEST_CASE( sha256_test )
 {
-   test( CRYPTO_SHA2_256_ID,  TEST1, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad" );
-   test( CRYPTO_SHA2_256_ID,  TEST2, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" );
-   test( CRYPTO_SHA2_256_ID,  TEST3, "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1" );
-   test( CRYPTO_SHA2_256_ID,  TEST4, "cf5b16a778af8380036ce59e7b0492370b249b11e8f07a51afac45037afee9d1" );
-   test( CRYPTO_SHA2_256_ID,  TEST5, "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0" );
-   test_big( CRYPTO_SHA2_256_ID,  "50e72a0e26442fe2552dc3938ac58658228c0cbfb1d2ca872ae435266fcd055e" );
+   test( multicodec::sha2_256, TEST1, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad" );
+   test( multicodec::sha2_256, TEST2, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" );
+   test( multicodec::sha2_256, TEST3, "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1" );
+   test( multicodec::sha2_256, TEST4, "cf5b16a778af8380036ce59e7b0492370b249b11e8f07a51afac45037afee9d1" );
+   test( multicodec::sha2_256, TEST5, "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0" );
+   test_big( multicodec::sha2_256, "50e72a0e26442fe2552dc3938ac58658228c0cbfb1d2ca872ae435266fcd055e" );
 }
 
 BOOST_AUTO_TEST_CASE( sha512_test )
 {
-   test( CRYPTO_SHA2_512_ID,  TEST1, "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a"
+   test( multicodec::sha2_512, TEST1, "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a"
                            "2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f" );
-   test( CRYPTO_SHA2_512_ID,  TEST2, "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce"
+   test( multicodec::sha2_512, TEST2, "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce"
                            "47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e" );
-   test( CRYPTO_SHA2_512_ID,  TEST3, "204a8fc6dda82f0a0ced7beb8e08a41657c16ef468b228a8279be331a703c335"
+   test( multicodec::sha2_512, TEST3, "204a8fc6dda82f0a0ced7beb8e08a41657c16ef468b228a8279be331a703c335"
                            "96fd15c13b1b07f9aa1d3bea57789ca031ad85c7a71dd70354ec631238ca3445" );
-   test( CRYPTO_SHA2_512_ID,  TEST4, "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018"
+   test( multicodec::sha2_512, TEST4, "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018"
                            "501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909" );
-   test( CRYPTO_SHA2_512_ID,  TEST5, "e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973eb"
+   test( multicodec::sha2_512, TEST5, "e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973eb"
                            "de0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b" );
-   test_big( CRYPTO_SHA2_512_ID,  "b47c933421ea2db149ad6e10fce6c7f93d0752380180ffd7f4629a712134831d"
+   test_big( multicodec::sha2_512, "b47c933421ea2db149ad6e10fce6c7f93d0752380180ffd7f4629a712134831d"
                         "77be6091b819ed352c2967a2e2d4fa5050723c9630691f1a05a7281dbe6c1086" );
 }
 
 BOOST_AUTO_TEST_CASE( ecc )
 {
-   koinos::crypto::private_key nullkey;
+   private_key nullkey;
    std::string pass = "foobar";
 
    for( uint32_t i = 0; i < 100; ++ i )
    {
-      koinos::multihash h = koinos::crypto::hash_str( CRYPTO_SHA2_256_ID, pass.c_str(), pass.size() );
-      koinos::crypto::private_key priv = koinos::crypto::private_key::regenerate( h );
+      multihash h = hash( multicodec::sha2_256, pass.c_str(), pass.size() );
+      private_key priv = private_key::regenerate( h );
       BOOST_CHECK( nullkey != priv );
-      koinos::crypto::public_key pub = priv.get_public_key();
+      public_key pub = priv.get_public_key();
 
       pass += "1";
-      koinos::multihash h2 = koinos::crypto::hash_str( CRYPTO_SHA2_256_ID, pass.c_str(), pass.size() );
-      koinos::crypto::public_key  pub1  = pub.add( h2 );
-      koinos::crypto::private_key priv1 = koinos::crypto::private_key::generate_from_seed(h, h2);
-
-      std::string b58 = pub1.to_base58();
-      koinos::crypto::public_key pub2 = koinos::crypto::public_key::from_base58(b58);
-      BOOST_CHECK( pub1 == pub2 );
+      multihash h2 = hash( multicodec::sha2_256, pass.c_str(), pass.size() );
+      public_key  pub1  = pub.add( h2 );
+      private_key priv1 = private_key::generate_from_seed(h, h2);
 
       auto sig = priv.sign_compact( h );
-      auto recover = koinos::crypto::public_key::recover( sig, h );
+      auto recover = public_key::recover( sig, h );
       BOOST_CHECK( recover == pub );
    }
 }
@@ -88,10 +97,10 @@ BOOST_AUTO_TEST_CASE( private_wif )
 {
    std::string secret = "foobar";
    std::string wif = "5KJTiKfLEzvFuowRMJqDZnSExxxwspVni1G4RcggoPtDqP5XgM1";
-   koinos::crypto::private_key key1 = koinos::crypto::private_key::regenerate( koinos::crypto::hash_str( CRYPTO_SHA2_256_ID, secret.c_str(), secret.size() ) );
+   private_key key1 = private_key::regenerate( hash( multicodec::sha2_256, secret.c_str(), secret.size() ) );
    BOOST_CHECK_EQUAL( key1.to_wif(), wif );
 
-   koinos::crypto::private_key key2 = koinos::crypto::private_key::from_wif( wif );
+   private_key key2 = private_key::from_wif( wif );
    BOOST_CHECK( key1 == key2 );
 
    // Encoding:
@@ -100,51 +109,58 @@ BOOST_AUTO_TEST_CASE( private_wif )
 
    // Wrong checksum, change last octal (4->3)
    wif = "5KJTiKfLEzvFuowRMJqDZnSExxxwspVni1G4RcggoPtDqP5XgLz";
-   BOOST_REQUIRE_THROW( koinos::crypto::private_key::from_wif( wif ), koinos::crypto::key_serialization_error );
+   BOOST_REQUIRE_THROW( private_key::from_wif( wif ), key_serialization_error );
 
    // Wrong seed, change first octal of secret (C->D)
    wif = "5KRWQqW5riLTcB39nLw6K7iv2HWBMYvbP7Ch4kUgRd8kEvLH5jH";
-   BOOST_REQUIRE_THROW( koinos::crypto::private_key::from_wif( wif ), koinos::crypto::key_serialization_error );
+   BOOST_REQUIRE_THROW( private_key::from_wif( wif ), key_serialization_error );
 
    // Wrong prefix, change first octal of prefix (8->7)
    wif = "4nCYtcUpcC6dkge8r2uEJeqrK97TUZ1n7n8LXDgLtun1wRyxU2P";
-   BOOST_REQUIRE_THROW( koinos::crypto::private_key::from_wif( wif ), koinos::crypto::key_serialization_error );
+   BOOST_REQUIRE_THROW( private_key::from_wif( wif ), key_serialization_error );
 }
 
 BOOST_AUTO_TEST_CASE( public_address )
 {
    std::string private_wif = "5J1F7GHadZG3sCCKHCwg8Jvys9xUbFsjLnGec4H125Ny1V9nR6V";
-   auto priv_key = koinos::crypto::private_key::from_wif( private_wif );
+   auto priv_key = private_key::from_wif( private_wif );
    auto pub_key = priv_key.get_public_key();
-   auto address = pub_key.to_address();
+   auto address = pub_key.to_address_bytes();
 
-   BOOST_REQUIRE_EQUAL( address, "1PMycacnJaSqwwJqjawXBErnLsZ7RkXUAs" );
+   const unsigned char bytes[] = { 0x00, 0xf5, 0x4a, 0x58, 0x51, 0xe9, 0x37, 0x2b, 0x87, 0x81, 0x0a, 0x8e, 0x60,
+                          0xcd, 0xd2, 0xe7, 0xcf, 0xd8, 0x0b, 0x6e, 0x31, 0xc7, 0xf1, 0x8f, 0xe8 };
+   std::string address_bytes( reinterpret_cast< const char* >( bytes ), sizeof( bytes ) );
+
+   BOOST_REQUIRE_EQUAL( address, address_bytes );
 }
 
 BOOST_AUTO_TEST_CASE( zerohash )
 {
-   koinos::multihash mh;
-   mh = koinos::crypto::zero_hash( CRYPTO_SHA2_256_ID );
-   BOOST_CHECK( mh.id == CRYPTO_SHA2_256_ID );
-   BOOST_CHECK( mh.digest.size() == 256/8 );
+   multihash mh;
+   mh = multihash::zero( multicodec::sha2_256 );
+   BOOST_CHECK( mh.code() == multicodec::sha2_256 );
+   BOOST_CHECK( mh.digest().size() == 256/8 );
 
-   mh = koinos::crypto::zero_hash( CRYPTO_RIPEMD160_ID );
-   BOOST_CHECK( mh.id == CRYPTO_RIPEMD160_ID );
-   BOOST_CHECK( mh.digest.size() == 160/8 );
+   mh = multihash::zero( multicodec::ripemd_160 );
+   BOOST_CHECK( mh.code() == multicodec::ripemd_160 );
+   BOOST_CHECK( mh.digest().size() == 160/8 );
 }
 
 BOOST_AUTO_TEST_CASE( emptyhash )
 {
-   koinos::multihash mh = koinos::crypto::empty_hash( CRYPTO_SHA2_256_ID );
-   BOOST_CHECK_EQUAL( "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", hex_string( mh.digest ) );
+   multihash mh = multihash::empty( multicodec::sha2_256 );
+   BOOST_CHECK_EQUAL( "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", hex_string( mh.digest() ) );
 }
 
 BOOST_AUTO_TEST_CASE( merkle )
 {
-   koinos::multihash mh;
-   std::vector< std::string > values {
-      "the", "quick", "brown", "fox", "jumps", "over", "a", "lazy", "dog" };
-   std::vector< std::string > wh_hex {
+   std::vector< std::string > values
+   {
+      "the", "quick", "brown", "fox", "jumps", "over", "a", "lazy", "dog"
+   };
+
+   std::vector< std::string > wh_hex
+   {
       "b9776d7ddf459c9ad5b0e1d6ac61e27befb5e99fd62446677600d7cacef544d0",
       "22c72aa82ce77c82e2ca65a711c79eaa4b51c57f85f91489ceeacc7b385943ba",
       "5eb67f9f8409b9c3f739735633cbdf92121393d0e13bd0f464b1b2a6a15ad2dc",
@@ -154,81 +170,160 @@ BOOST_AUTO_TEST_CASE( merkle )
       "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
       "81fd67d02f679b818a4df6a50139958aa857eddc4d8f3561630dfb905e6d3c24",
       "cd6357efdd966de8c0cb2f876cc89ec74ce35f0968e11743987084bd42fb8944"
-      };
-   auto h = [&]( const koinos::multihash& ha, const koinos::multihash& hb ) -> koinos::multihash
+   };
+
+   auto h = [&]( const multihash& ha, const multihash& hb ) -> multihash
    {
-      std::vector<char> temp;
-      std::copy( ha.digest.begin(), ha.digest.end(), std::back_inserter( temp ) );
-      std::copy( hb.digest.begin(), hb.digest.end(), std::back_inserter( temp ) );
-      koinos::multihash result = koinos::crypto::hash_str( CRYPTO_SHA2_256_ID, temp.data(), temp.size() );
+      std::vector< std::byte > temp;
+      std::copy( ha.digest().begin(), ha.digest().end(), std::back_inserter( temp ) );
+      std::copy( hb.digest().begin(), hb.digest().end(), std::back_inserter( temp ) );
+      multihash result = hash( multicodec::sha2_256, (char*)temp.data(), temp.size() );
       return result;
    };
 
    // Hash of each word
-   std::vector< koinos::multihash > wh;
+   std::vector< multihash > wh;
    for( size_t i = 0; i < values.size(); i++ )
    {
-      wh.push_back( koinos::crypto::hash_str( CRYPTO_SHA2_256_ID, values[i].c_str(), values[i].size() ) );
-      BOOST_CHECK_EQUAL( wh_hex[i], hex_string( wh[i].digest ) );
+      wh.push_back( hash( multicodec::sha2_256, values[i].c_str(), values[i].size() ) );
+      BOOST_CHECK_EQUAL( wh_hex[i], hex_string( wh[i].digest() ) );
    }
 
-   const std::string n01          = "0020397085ab4494829e691c49353a04d3201fda20c6a8a6866cf0f84bb8ce47";
-   const std::string n23          = "78d4e37706320c82b2dd092eeb04b1f271523f86f910bf680ff9afcb2f8a33e1";
-   const std::string n0123        = "e07aa684d91ffcbb89952f5e99b6181f7ee7bd88bd97be1345fc508f1062c050";
-   const std::string n45          = "4185f41c5d7980ae7d14ce248f50e2854826c383671cf1ee3825ea957315c627";
-   const std::string n67          = "b2a6704395c45ad8c99247103b580f7e7a37f06c3d38075ce4b02bc34c6a6754";
-   const std::string n4567        = "2f24a249901ee8392ba0bb3b90c8efd6e2fee6530f45769199ef82d0b091d8ba";
-   const std::string n01234567    = "913b7dce068efc8db6fab0173481f137ce91352b341855a1719aaff926169987";
-   const std::string n8           = "cd6357efdd966de8c0cb2f876cc89ec74ce35f0968e11743987084bd42fb8944";
-   const std::string n012345678   = "e24e552e0b6cf8835af179a14a766fb58c23e4ee1f7c6317d57ce39cc578cfac";
+   const std::string n01        = "0020397085ab4494829e691c49353a04d3201fda20c6a8a6866cf0f84bb8ce47";
+   const std::string n23        = "78d4e37706320c82b2dd092eeb04b1f271523f86f910bf680ff9afcb2f8a33e1";
+   const std::string n0123      = "e07aa684d91ffcbb89952f5e99b6181f7ee7bd88bd97be1345fc508f1062c050";
+   const std::string n45        = "4185f41c5d7980ae7d14ce248f50e2854826c383671cf1ee3825ea957315c627";
+   const std::string n67        = "b2a6704395c45ad8c99247103b580f7e7a37f06c3d38075ce4b02bc34c6a6754";
+   const std::string n4567      = "2f24a249901ee8392ba0bb3b90c8efd6e2fee6530f45769199ef82d0b091d8ba";
+   const std::string n01234567  = "913b7dce068efc8db6fab0173481f137ce91352b341855a1719aaff926169987";
+   const std::string n8         = "cd6357efdd966de8c0cb2f876cc89ec74ce35f0968e11743987084bd42fb8944";
+   const std::string n012345678 = "e24e552e0b6cf8835af179a14a766fb58c23e4ee1f7c6317d57ce39cc578cfac";
 
-   koinos::multihash h01             = h( wh[0], wh[1] );
-   koinos::multihash h23             = h( wh[2], wh[3] );
-   koinos::multihash h0123           = h( h01, h23 );
-   koinos::multihash h45             = h( wh[4], wh[5] );
-   koinos::multihash h67             = h( wh[6], wh[7] );
-   koinos::multihash h4567           = h( h45, h67 );
-   koinos::multihash h01234567       = h( h0123, h4567 );
-   koinos::multihash h8              = wh[8];
-   koinos::multihash h012345678      = h( h01234567, h8 );
+   multihash h01        = h( wh[0], wh[1] );
+   multihash h23        = h( wh[2], wh[3] );
+   multihash h0123      = h( h01, h23 );
+   multihash h45        = h( wh[4], wh[5] );
+   multihash h67        = h( wh[6], wh[7] );
+   multihash h4567      = h( h45, h67 );
+   multihash h01234567  = h( h0123, h4567 );
+   multihash h8         = wh[8];
+   multihash h012345678 = h( h01234567, h8 );
 
-   BOOST_CHECK_EQUAL( n01       , hex_string(        h01.digest ) );
-   BOOST_CHECK_EQUAL( n23       , hex_string(        h23.digest ) );
-   BOOST_CHECK_EQUAL( n0123     , hex_string(      h0123.digest ) );
-   BOOST_CHECK_EQUAL( n45       , hex_string(        h45.digest ) );
-   BOOST_CHECK_EQUAL( n67       , hex_string(        h67.digest ) );
-   BOOST_CHECK_EQUAL( n4567     , hex_string(      h4567.digest ) );
-   BOOST_CHECK_EQUAL( n01234567 , hex_string(  h01234567.digest ) );
-   BOOST_CHECK_EQUAL( n012345678, hex_string( h012345678.digest ) );
+   BOOST_CHECK_EQUAL( n01       , hex_string(        h01.digest() ) );
+   BOOST_CHECK_EQUAL( n23       , hex_string(        h23.digest() ) );
+   BOOST_CHECK_EQUAL( n0123     , hex_string(      h0123.digest() ) );
+   BOOST_CHECK_EQUAL( n45       , hex_string(        h45.digest() ) );
+   BOOST_CHECK_EQUAL( n67       , hex_string(        h67.digest() ) );
+   BOOST_CHECK_EQUAL( n4567     , hex_string(      h4567.digest() ) );
+   BOOST_CHECK_EQUAL( n01234567 , hex_string(  h01234567.digest() ) );
+   BOOST_CHECK_EQUAL( n012345678, hex_string( h012345678.digest() ) );
 
-   koinos::multihash merkle_root;
+   auto tree = merkle_tree( multicodec::sha2_256, values );
+   BOOST_CHECK_EQUAL( n012345678, hex_string( tree.root()->hash().digest() ) );
 
-   std::vector< koinos::variable_blob > blob_values;
-   for( size_t i = 0; i < values.size(); i++ )
-   {
-      blob_values.emplace_back( values[i].begin(), values[i].end() );
-   }
+   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->left()->left()->value()   , values[0] ); // the
+   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->left()->right()->value()  , values[1] ); // quick
+   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->right()->left()->value()  , values[2] ); // brown
+   BOOST_CHECK_EQUAL( *tree.root()->left()->left()->right()->right()->value() , values[3] ); // fox
+   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->left()->left()->value()  , values[4] ); // jumps
+   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->left()->right()->value() , values[5] ); // over
+   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->right()->left()->value() , values[6] ); // a
+   BOOST_CHECK_EQUAL( *tree.root()->left()->right()->right()->right()->value(), values[7] ); // lazy
+   BOOST_CHECK_EQUAL( *tree.root()->right()->value()                          , values[8] ); // dog
 
-   merkle_root = koinos::crypto::merkle_hash( CRYPTO_SHA2_256_ID, blob_values );
-   BOOST_CHECK_EQUAL( n012345678, hex_string( merkle_root.digest ) );
+   std::vector< multihash > v( values.size() );
+   std::transform(
+      std::begin( values ),
+      std::end( values ),
+      std::begin( v ),
+      [] ( const std::string& s ) { return hash( multicodec::sha2_256, s ); }
+   );
+
+   auto multihash_tree = merkle_tree( multicodec::sha2_256, v );
+   BOOST_CHECK_EQUAL( multihash_tree.root()->hash(), tree.root()->hash() );
+
+   auto mtree = merkle_tree( multicodec::sha2_256, std::vector< std::string >() );
+   BOOST_CHECK( mtree.root()->hash() == multihash::empty( multicodec::sha2_256 ) );
+   BOOST_CHECK( mtree.root()->hash() != multihash::zero( multicodec::sha2_256 ) );
 }
 
-BOOST_AUTO_TEST_CASE( hash_n_test )
+BOOST_AUTO_TEST_CASE( protocol_buffers_test )
 {
-   std::string obj1 = "abcdefghijklmnopqrstuvwxyz";
-   uint32_t obj2 = 10;
-   koinos::block_height_type obj3( 20 );
+   std::string id_str = "id";
+   std::string previous_str = "previous";
 
-   koinos::variable_blob vb;
-   koinos::pack::to_variable_blob( vb, obj1 );
-   koinos::pack::to_variable_blob( vb, obj2, true );
-   koinos::pack::to_variable_blob( vb, obj3, true );
+   koinos::block_topology block_topology;
+   block_topology.set_height( 100 );
+   block_topology.set_id( koinos::converter::as< std::string>( hash( multicodec::sha1, id_str ) ) );
+   block_topology.set_previous( koinos::converter::as< std::string>( hash( multicodec::sha2_512, previous_str ) ) );
 
-   koinos::multihash hash_result   = koinos::crypto::hash( CRYPTO_SHA2_256_ID, vb );
-   koinos::multihash hash_n_result = koinos::crypto::hash_n( CRYPTO_SHA2_256_ID, obj1, obj2, obj3 );
+   auto mhash = hash( multicodec::sha2_256, block_topology );
 
-   BOOST_CHECK_EQUAL( hash_result.id, hash_n_result.id );
-   BOOST_CHECK_EQUAL( hex_string( hash_result.digest ), hex_string( hash_n_result.digest ) );
+   std::stringstream stream;
+   block_topology.SerializeToOstream( &stream );
+   std::string str = stream.str();
+
+   std::vector< std::byte > bytes( str.size() );
+   std::transform( str.begin(), str.end(), bytes.begin(), []( char c ) { return std::byte( c ); } );
+
+   BOOST_CHECK( hash( multicodec::sha2_256, bytes ) == mhash );
+
+   auto id_hash = koinos::converter::to< multihash >( block_topology.id() );
+   BOOST_CHECK( id_hash == hash( multicodec::sha1, id_str ) );
+
+   auto previous_hash = koinos::converter::to< multihash >( block_topology.previous() );
+   BOOST_CHECK( previous_hash == hash( multicodec::sha2_512, previous_str ) );
+
+   auto mhash2 = hash( multicodec::sha2_256, &block_topology );
+   BOOST_CHECK( mhash == mhash2 );
+}
+
+BOOST_AUTO_TEST_CASE( multihash_serialization )
+{
+   auto mhash = hash( multicodec::ripemd_160, std::string( "a quick brown fox jumps over the lazy dog" ) );
+
+   std::stringstream stream;
+   koinos::to_binary( stream, mhash );
+
+   multihash tmp;
+   koinos::from_binary( stream, tmp );
+   BOOST_CHECK( mhash == tmp );
+
+   std::stringstream ss;
+   ss << mhash;
+   BOOST_CHECK( ss.str() == "0xd3201409c999f213afff19793d8288023c512f71873deb" );
+
+   try {
+      KOINOS_THROW( koinos::exception, "test multihash in exception: ${mh}", ("mh", mhash ) );
+      BOOST_REQUIRE( false );
+   }
+   catch( const koinos::exception& e )
+   {
+      BOOST_REQUIRE( e.what() == std::string( "test multihash in exception: 0xd3201409c999f213afff19793d8288023c512f71873deb" ) );
+   }
+}
+
+BOOST_AUTO_TEST_CASE( variadic_hash )
+{
+   std::string id_str = "id";
+   std::string previous_str = "previous";
+
+   koinos::block_topology block_topology;
+   block_topology.set_height( 100 );
+   block_topology.set_id( koinos::converter::as< std::string>( hash( multicodec::sha1, id_str ) ) );
+   block_topology.set_previous( koinos::converter::as< std::string>( hash( multicodec::sha2_512, previous_str ) ) );
+
+   std::stringstream ss;
+   block_topology.SerializeToOstream( &ss );
+   ss << "a quick brown fox jumps over the lazy dog";
+
+   koinos::uint256_t x = 0;
+   koinos::to_binary( ss, x );
+
+   auto mhash1 = hash( multicodec::ripemd_160, ss.str() );
+   auto mhash2 = hash( multicodec::ripemd_160, block_topology, std::string( "a quick brown fox jumps over the lazy dog" ), x );
+
+   BOOST_REQUIRE( mhash1 == mhash2 );
 }
 
 BOOST_AUTO_TEST_SUITE_END()

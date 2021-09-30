@@ -6,30 +6,37 @@ hunter_config(Boost
       Boost_NO_BOOST_CMAKE=ON
 )
 
-hunter_config(koinos_exception
-   URL  "https://github.com/koinos/koinos-exception-cpp/archive/373937ced4b890bc6a8dbdad6452560860a38f5e.tar.gz"
-   SHA1 "1dd40d3e733d7a9220adbe64e47e40c0b1079062"
+hunter_config(Protobuf
+   VERSION ${HUNTER_Protobuf_VERSION}
+   CMAKE_ARGS
+      CMAKE_CXX_FLAGS=-fvisibility=hidden
+      CMAKE_C_FLAGS=-fvisibility=hidden
+)
+
+hunter_config(koinos_log
+   URL  "https://github.com/koinos/koinos-log-cpp/archive/8a148b2839116e060b3327fe6358210dd2a55f4d.tar.gz"
+   SHA1 "8075e5882ffc5d450b35521792dcf6b29027cebd"
    CMAKE_ARGS
       BUILD_TESTS=OFF
 )
 
 hunter_config(koinos_util
-   URL  "https://github.com/koinos/koinos-util-cpp/archive/43280d7adc1f033e42bb2e0d50bb39d31a2dbeaa.tar.gz"
-   SHA1 "5be977696aa13be3d87500b486cd9e6cef0f12a9"
-)
-
-hunter_config(koinos_log
-   URL  "https://github.com/koinos/koinos-log-cpp/archive/5d2d7a185f068f76f80c2335773bfbacdbc3176e.tar.gz"
-   SHA1 "d3a58334b7ff3fc24933fad94921a57c3cd2369f"
+   URL  "https://github.com/koinos/koinos-util-cpp/archive/cb6e5eadfb06dd0274e5d4ba8c9189909d529071.tar.gz"
+   SHA1 "e420b0f572fec7c9c379a788c7e485e7b84b4d65"
    CMAKE_ARGS
       BUILD_TESTS=OFF
 )
 
-hunter_config(koinos_types
-   URL  "https://github.com/koinos/koinos-types/archive/4c63adec26d12aefd4922a41fd8033af5694d816.tar.gz"
-   SHA1 "05eff0cc17fc2fd07c6b531b5dce6a8dbc6570a7"
+hunter_config(koinos_exception
+   URL  "https://github.com/koinos/koinos-exception-cpp/archive/071924986460c492d98b14d108d64da8d83c4593.tar.gz"
+   SHA1 "5b7af085047be840e3894e55fee68a852866661f"
    CMAKE_ARGS
       BUILD_TESTS=OFF
+)
+
+hunter_config(koinos_proto
+   URL  "https://github.com/koinos/koinos-proto-cpp/archive/4acb3322d25148c66cf423cbe1c77c202439dfa8.tar.gz"
+   SHA1 "b8df692d6a535105c7673c883f0b3b8db5732d13"
 )
 
 hunter_config(libsecp256k1
