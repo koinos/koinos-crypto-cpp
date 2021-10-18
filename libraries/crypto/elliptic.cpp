@@ -1,8 +1,8 @@
-#include <koinos/base58.hpp>
-#include <koinos/conversion.hpp>
 #include <koinos/crypto/elliptic.hpp>
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/crypto/openssl.hpp>
+#include <koinos/util/base58.hpp>
+#include <koinos/util/conversion.hpp>
 
 #include <boost/core/ignore_unused.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
@@ -131,7 +131,7 @@ namespace detail {
       sha256 = hash( multicodec::sha2_256, (char*)d.data(), ripemd160.digest().size() + 1 );
       sha256 = hash( multicodec::sha2_256, sha256 );
       std::memcpy( d.data() + ripemd160.digest().size() + 1, sha256.digest().data(), 4 );
-      return converter::as< std::string >( d );
+      return util::converter::as< std::string >( d );
    }
 
    unsigned int public_key_impl::fingerprint() const
@@ -373,13 +373,13 @@ std::string private_key::to_wif( std::byte prefix )
    auto extended_hash = hash( multicodec::sha2_256, (char*)d.data(), _key.size() + 1 );
    check = *((uint32_t*)hash( multicodec::sha2_256, extended_hash ).digest().data());
    std::memcpy( d.data() + _key.size() + 1, (const char*)&check, sizeof(check)  );
-   return encode_base58( d );
+   return util::encode_base58( d );
 }
 
 private_key private_key::from_wif( const std::string& b58, std::byte prefix )
 {
    std::array< char, 37 > d;
-   decode_base58( b58, d );
+   util::decode_base58( b58, d );
    KOINOS_ASSERT( d[0] == std::to_integer< char >( prefix ), key_serialization_error, "incorrect WIF prefix" );
    private_key key;
    auto extended_hash = hash( multicodec::sha2_256, d.data(), key._key.size() + 1 );

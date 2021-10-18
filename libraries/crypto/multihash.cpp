@@ -1,6 +1,6 @@
 #include <koinos/crypto/multihash.hpp>
 
-#include <koinos/util.hpp>
+#include <koinos/util/hex.hpp>
 
 #include <iostream>
 #include <map>
@@ -229,7 +229,7 @@ std::ostream& operator<<( std::ostream& out, const crypto::multihash& mh )
 {
    std::stringstream bin;
    to_binary( bin, mh );
-   return out << to_hex( bin.str() );
+   return out << util::to_hex( bin.str() );
 }
 
 void to_json( nlohmann::json& j, const multihash& mh )
