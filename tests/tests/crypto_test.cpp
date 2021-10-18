@@ -10,7 +10,7 @@
 
 #include <koinos/bigint.hpp>
 
-#include <koinos/conversion.hpp>
+#include <koinos/util/conversion.hpp>
 
 #include <koinos/crypto/elliptic.hpp>
 #include <koinos/crypto/multihash.hpp>
@@ -254,8 +254,8 @@ BOOST_AUTO_TEST_CASE( protocol_buffers_test )
 
    koinos::block_topology block_topology;
    block_topology.set_height( 100 );
-   block_topology.set_id( koinos::converter::as< std::string>( hash( multicodec::sha1, id_str ) ) );
-   block_topology.set_previous( koinos::converter::as< std::string>( hash( multicodec::sha2_512, previous_str ) ) );
+   block_topology.set_id( koinos::util::converter::as< std::string>( hash( multicodec::sha1, id_str ) ) );
+   block_topology.set_previous( koinos::util::converter::as< std::string>( hash( multicodec::sha2_512, previous_str ) ) );
 
    auto mhash = hash( multicodec::sha2_256, block_topology );
 
@@ -268,10 +268,10 @@ BOOST_AUTO_TEST_CASE( protocol_buffers_test )
 
    BOOST_CHECK( hash( multicodec::sha2_256, bytes ) == mhash );
 
-   auto id_hash = koinos::converter::to< multihash >( block_topology.id() );
+   auto id_hash = koinos::util::converter::to< multihash >( block_topology.id() );
    BOOST_CHECK( id_hash == hash( multicodec::sha1, id_str ) );
 
-   auto previous_hash = koinos::converter::to< multihash >( block_topology.previous() );
+   auto previous_hash = koinos::util::converter::to< multihash >( block_topology.previous() );
    BOOST_CHECK( previous_hash == hash( multicodec::sha2_512, previous_str ) );
 
    auto mhash2 = hash( multicodec::sha2_256, &block_topology );
@@ -310,8 +310,8 @@ BOOST_AUTO_TEST_CASE( variadic_hash )
 
    koinos::block_topology block_topology;
    block_topology.set_height( 100 );
-   block_topology.set_id( koinos::converter::as< std::string>( hash( multicodec::sha1, id_str ) ) );
-   block_topology.set_previous( koinos::converter::as< std::string>( hash( multicodec::sha2_512, previous_str ) ) );
+   block_topology.set_id( koinos::util::converter::as< std::string>( hash( multicodec::sha1, id_str ) ) );
+   block_topology.set_previous( koinos::util::converter::as< std::string>( hash( multicodec::sha2_512, previous_str ) ) );
 
    std::stringstream ss;
    block_topology.SerializeToOstream( &ss );
