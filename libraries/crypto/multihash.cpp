@@ -270,4 +270,10 @@ void from_binary< crypto::multihash >( std::istream& s, crypto::multihash& v )
    v = crypto::multihash( static_cast< crypto::multicodec >( code.value ), digest );
 }
 
+template<>
+void to_binary< std::string >( std::ostream& s, const std::string& v )
+{
+   s.write( v.c_str(), v.size() );
+}
+
 } // koinos

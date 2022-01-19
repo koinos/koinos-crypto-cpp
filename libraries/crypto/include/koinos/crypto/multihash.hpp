@@ -7,6 +7,7 @@
 #include <openssl/evp.h>
 
 #include <google/protobuf/message.h>
+#include <google/protobuf/repeated_field.h>
 
 #include <koinos/exception.hpp>
 #include <koinos/varint.hpp>
@@ -22,6 +23,29 @@ void to_binary< crypto::multihash >( std::ostream& s, const crypto::multihash& m
 
 template<>
 void from_binary< crypto::multihash >( std::istream& s, crypto::multihash& v );
+
+template<>
+void to_binary< std::string >( std::ostream& s, const std::string& v );
+
+template< class T >
+std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void >
+to_binary( std::ostream& s, const google::protobuf::RepeatedPtrField< T >& rpf )
+{
+   for( const auto& t : rpf )
+   {
+      t.SerializeToOstream( s );
+   }
+}
+
+template< class T >
+std::enable_if_t< !std::is_base_of_v< google::protobuf::Message, T >, void >
+to_binary( std::ostream& s, const google::protobuf::RepeatedPtrField< T >& rpf )
+{
+   for( const auto& t : rpf )
+   {
+      to_binary( s, t );
+   }
+}
 
 namespace crypto {
 
