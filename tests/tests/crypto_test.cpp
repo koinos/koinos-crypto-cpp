@@ -24,6 +24,21 @@ using namespace koinos::crypto;
 
 BOOST_FIXTURE_TEST_SUITE( crypto_tests, crypto_fixture )
 
+BOOST_AUTO_TEST_CASE( key_test )
+{
+   auto priv = private_key::regenerate( hash( multicodec::sha2_256, std::string{ "seed" } ) );
+   auto pub = priv.get_public_key();
+   auto compressed = pub.serialize();
+   auto pub2 = public_key::deserialize( compressed );
+   BOOST_REQUIRE_EQUAL( pub.to_address_bytes(), pub2.to_address_bytes() );
+
+   std::stringstream ss;
+   koinos::to_binary( ss, pub );
+   public_key pub3;
+   koinos::from_binary( ss, pub3 );
+   BOOST_REQUIRE_EQUAL( pub.to_address_bytes(), pub3.to_address_bytes() );
+}
+
 BOOST_AUTO_TEST_CASE( ripemd160_test )
 {
    test( multicodec::ripemd_160, TEST1, "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc" );
