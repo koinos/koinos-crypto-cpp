@@ -5,7 +5,7 @@ add_library(koinos_crypto
             openssl.cpp
             ${HEADERS})
 
-target_link_libraries(koinos_crypto PUBLIC Koinos::exception Koinos::proto Koinos::util OpenSSL::SSL OpenSSL::Crypto secp256k1::secp256k1 protobuf::libprotobuf)
+target_link_libraries(koinos_crypto PUBLIC Koinos::exception Koinos::proto Koinos::util OpenSSL::SSL OpenSSL::Crypto secp256k1::secp256k1 protobuf::libprotobuf ethash::ethash)
 
 target_include_directories(koinos_crypto PUBLIC
    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

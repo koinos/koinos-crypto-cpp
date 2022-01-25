@@ -52,6 +52,7 @@ namespace crypto {
 KOINOS_DECLARE_EXCEPTION( unknown_hash_algorithm );
 KOINOS_DECLARE_EXCEPTION( multihash_size_mismatch );
 KOINOS_DECLARE_EXCEPTION( multihash_size_limit_exceeded );
+KOINOS_DECLARE_EXCEPTION( internal_error );
 
 /*
  * Multicodec IDs for hash algorithms
@@ -63,6 +64,7 @@ enum class multicodec : std::uint64_t
    sha1       = 0x11,
    sha2_256   = 0x12,
    sha2_512   = 0x13,
+   keccak_256 = 0x1b,
    ripemd_160 = 0x1053
 };
 
@@ -103,26 +105,58 @@ private:
 
 namespace detail {
 
-struct encoder final : std::streambuf, std::ostream
+struct encoder : std::streambuf, std::ostream
 {
    encoder( multicodec code, std::size_t size = 0 );
    encoder( const encoder& ) = delete;
    encoder( encoder&& ) = delete;
-   ~encoder();
+   virtual ~encoder() = default;
 
-   std::streamsize xsputn( const char* s, std::streamsize n ) override;
+// These are the streambuf and ostream functions needed to be implemented
+//   std::streamsize xsputn( const char* s, std::streamsize n ) override;
+//   void reset();
 
    void write( const char* d, std::size_t len );
    void put( char c );
-   void reset();
    void set_size( std::size_t size = 0 );
-   multihash get_hash();
+   virtual multihash get_hash() = 0;
+
+   protected:
+      multicodec _code;
+      std::size_t _size;
+};
+
+struct openssl_encoder final : encoder
+{
+   openssl_encoder( multicodec code, std::size_t size = 0 );
+   openssl_encoder( const openssl_encoder& ) = delete;
+   openssl_encoder( openssl_encoder&& ) = delete;
+   ~openssl_encoder();
+
+   std::streamsize xsputn( const char* s, std::streamsize n ) override;
+   void reset();
+
+   virtual multihash get_hash() override;
 
    private:
       const EVP_MD* md = nullptr;
       EVP_MD_CTX* mdctx = nullptr;
-      multicodec _code;
-      std::size_t _size;
+};
+
+struct ethash_encoder final : encoder
+{
+   ethash_encoder( multicodec code, std::size_t size = 0 );
+   ethash_encoder( const ethash_encoder& ) = delete;
+   ethash_encoder( ethash_encoder&& ) = delete;
+   ~ethash_encoder() = default;
+
+   std::streamsize xsputn( const char* s, std::streamsize n ) override;
+   void reset();
+
+   multihash get_hash() override;
+
+   private:
+      std::stringbuf _buf;
 };
 
 void hash_c_str( encoder& e, const char* data, std::size_t len );
@@ -261,9 +295,31 @@ void hash_n_impl( encoder& e, T&& t, Ts... ts )
 template< class... Ts >
 multihash hash( multicodec code, Ts... ts )
 {
-   detail::encoder e( code );
-   detail::hash_n_impl( e, std::forward< Ts >( ts )... );
-   return e.get_hash();
+   switch ( code )
+   {
+      case multicodec::sha1:
+         [[fallthrough]];
+      case multicodec::sha2_256:
+         [[fallthrough]];
+      case multicodec::sha2_512:
+         [[fallthrough]];
+      case multicodec::ripemd_160:
+      {
+         detail::openssl_encoder e( code );
+         detail::hash_n_impl( e, std::forward< Ts >( ts )... );
+         return e.get_hash();
+         break;
+      }
+      case multicodec::keccak_256:
+      {
+         detail::ethash_encoder e( code );
+         detail::hash_n_impl( e, std::forward< Ts >( ts )... );
+         return e.get_hash();
+         break;
+      }
+      default:
+         KOINOS_ASSERT( false, unknown_hash_algorithm, "unknown hash code ${i}", ("i", static_cast< std::underlying_type_t< multicodec > >( code )) );
+   }
 }
 
 std::ostream& operator<<( std::ostream&, const crypto::multihash& );
