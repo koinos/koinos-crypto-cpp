@@ -378,7 +378,7 @@ BOOST_AUTO_TEST_CASE( vrf_tests )
       else
          const_cast< char* >( proof.data() )[i] = 0x00;
 
-      BOOST_REQUIRE_THROW( pub_key.verify_random_proof( msg, proof ), koinos::exception );
+      BOOST_REQUIRE_THROW( pub_key.verify_random_proof( msg, proof ), vrf_validation_error );
 
       const_cast< char* >( proof.data() )[ i ] = temp;
 

@@ -14,6 +14,8 @@ namespace koinos { namespace crypto {
    KOINOS_DECLARE_EXCEPTION( key_recovery_error );
    KOINOS_DECLARE_EXCEPTION( key_manipulation_error );
    KOINOS_DECLARE_EXCEPTION( signing_error );
+   KOINOS_DECLARE_EXCEPTION( vrf_generation_error );
+   KOINOS_DECLARE_EXCEPTION( vrf_validation_error );
 
    namespace detail { struct public_key_impl; }
 

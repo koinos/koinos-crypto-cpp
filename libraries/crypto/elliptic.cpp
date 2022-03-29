@@ -228,7 +228,7 @@ multihash public_key::verify_random_proof( const std::string& input, const std::
          reinterpret_cast< unsigned char* >( serialize().data() ),
          input.data(),
          input.size() ),
-      exception,
+      vrf_validation_error,
       "random proof failed verification" );
 
    return multihash( multicodec::sha2_256, std::move( digest ) );
@@ -376,7 +376,7 @@ std::pair< std::string, multihash > private_key::generate_random_proof( const st
          reinterpret_cast< secp256k1_pubkey* >( get_public_key()._my->_key.data() ),
          input.data(),
          input.size() ),
-      exception,
+      vrf_generation_error,
       "failed to generate random proof"
    );
 
@@ -386,7 +386,7 @@ std::pair< std::string, multihash > private_key::generate_random_proof( const st
          reinterpret_cast< unsigned char* >( digest.data() ),
          reinterpret_cast< unsigned char* >( const_cast< char* >( proof.data() ) )
       ),
-      exception,
+      vrf_generation_error,
       "failed to hash random proof"
    );
 
