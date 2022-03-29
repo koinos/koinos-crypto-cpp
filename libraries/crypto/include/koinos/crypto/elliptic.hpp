@@ -33,10 +33,10 @@ namespace koinos { namespace crypto {
 
          ~public_key();
 
-         compressed_public_key serialize()const;
+         compressed_public_key serialize() const;
          static public_key deserialize( const compressed_public_key& cpk );
 
-         operator compressed_public_key()const { return serialize(); }
+         operator compressed_public_key() const { return serialize(); }
 
          /**
           * Recovers a public key from a 65 byte recoverable signature (R, S, rec_id).
@@ -53,9 +53,11 @@ namespace koinos { namespace crypto {
 
          /** Computes new pubkey = regenerate(offset).pubkey + old pubkey
          *                      = offset * G + 1 * old pubkey ?! */
-         public_key add( const multihash& offset )const;
+         public_key add( const multihash& offset ) const;
 
-         bool valid()const;
+         bool valid() const;
+
+         multihash verify_random_proof( const std::string& input, const std::string& proof ) const;
 
          public_key& operator =( public_key&& pk );
          public_key& operator =( const public_key& pk );
@@ -67,7 +69,7 @@ namespace koinos { namespace crypto {
             return !(a == b);
          }
 
-         std::string to_address_bytes( std::byte prefix = std::byte{ 0x00 } )const;
+         std::string to_address_bytes( std::byte prefix = std::byte{ 0x00 } ) const;
 
          unsigned int fingerprint() const;
 
@@ -105,13 +107,15 @@ namespace koinos { namespace crypto {
          */
          static private_key generate_from_seed( const multihash& seed, const multihash& offset = multihash() );
 
-         private_key_secret get_secret()const; // get the private key secret
+         private_key_secret get_secret() const; // get the private key secret
 
-         operator private_key_secret ()const { return get_secret(); }
+         operator private_key_secret () const { return get_secret(); }
 
-         recoverable_signature sign_compact( const multihash& digest )const;
+         recoverable_signature sign_compact( const multihash& digest ) const;
 
-         public_key get_public_key()const;
+         std::pair< std::string, multihash > generate_random_proof( const std::string& input ) const;
+
+         public_key get_public_key() const;
 
          inline friend bool operator==( const private_key& a, const private_key& b )
          {

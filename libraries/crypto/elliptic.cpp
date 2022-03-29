@@ -7,7 +7,7 @@
 #include <boost/core/ignore_unused.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
-#include <secp256k1.h>
+#include <secp256k1-vrf.h>
 #include <secp256k1_recovery.h>
 
 namespace koinos { namespace crypto {
@@ -55,11 +55,11 @@ namespace detail {
 
       ~public_key_impl();
 
-      compressed_public_key serialize()const;
+      compressed_public_key serialize() const;
 
-      public_key_impl add( const multihash& offset )const;
+      public_key_impl add( const multihash& offset ) const;
 
-      bool valid()const;
+      bool valid() const;
 
       friend bool operator ==( const public_key_impl& a, const public_key_impl& b )
       {
@@ -81,7 +81,7 @@ namespace detail {
 
    public_key_impl::~public_key_impl() {}
 
-   compressed_public_key public_key_impl::serialize()const
+   compressed_public_key public_key_impl::serialize() const
    {
       KOINOS_ASSERT( _key != empty_pub(), key_serialization_error, "cannot serialize an empty public key" );
 
@@ -101,7 +101,7 @@ namespace detail {
       return cpk;
    }
 
-   public_key_impl public_key_impl::add( const multihash& hash )const
+   public_key_impl public_key_impl::add( const multihash& hash ) const
    {
       KOINOS_ASSERT( hash.digest().size() == 32, key_manipulation_error, "digest must be 32 bytes" );
       KOINOS_ASSERT( _key != empty_pub(), key_manipulation_error, "cannot add to an empty key" );
@@ -115,12 +115,12 @@ namespace detail {
       return new_key;
    }
 
-   bool public_key_impl::valid()const
+   bool public_key_impl::valid() const
    {
       return _key != empty_pub();
    }
 
-   std::string public_key_impl::to_address_bytes( std::byte prefix )const
+   std::string public_key_impl::to_address_bytes( std::byte prefix ) const
    {
       auto compressed_key = serialize();
       auto sha256 = hash( multicodec::sha2_256, (char*)compressed_key.data(), compressed_key.size() );
@@ -218,6 +218,22 @@ bool public_key::valid() const
    return _my->valid();
 }
 
+multihash public_key::verify_random_proof( const std::string& input, const std::string& proof ) const
+{
+   digest_type digest( 32 );
+   KOINOS_ASSERT(
+      secp256k1_vrf_verify(
+         reinterpret_cast< unsigned char* >( digest.data() ),
+         reinterpret_cast< const unsigned char* >( proof.data() ),
+         reinterpret_cast< unsigned char* >( serialize().data() ),
+         input.data(),
+         input.size() ),
+      exception,
+      "random proof failed verification" );
+
+   return multihash( multicodec::sha2_256, std::move( digest ) );
+}
+
 public_key& public_key::operator=( const public_key& pk )
 {
    _my = std::make_unique< detail::public_key_impl >( *pk._my );
@@ -313,12 +329,12 @@ private_key private_key::generate_from_seed( const multihash& seed, const multih
    return regenerate( multihash( multicodec::sha2_256, digest ) );
 }
 
-private_key_secret private_key::get_secret()const
+private_key_secret private_key::get_secret() const
 {
    return _key;
 }
 
-recoverable_signature private_key::sign_compact( const multihash& digest )const
+recoverable_signature private_key::sign_compact( const multihash& digest ) const
 {
    KOINOS_ASSERT( digest.digest().size() == _key.size(), koinos::exception, "digest must be ${s} bits", ("s", _key.size()) );
    KOINOS_ASSERT( _key != empty_priv(), signing_error, "cannot sign with an empty key" );
@@ -350,7 +366,34 @@ recoverable_signature private_key::sign_compact( const multihash& digest )const
    return sig;
 }
 
-public_key private_key::get_public_key()const
+std::pair< std::string, multihash > private_key::generate_random_proof( const std::string& input ) const
+{
+   std::string proof( 81, '\0' );
+   KOINOS_ASSERT(
+      secp256k1_vrf_prove(
+         reinterpret_cast< unsigned char* >( const_cast< char* >( proof.data() ) ),
+         reinterpret_cast< const unsigned char* >( _key.data() ),
+         reinterpret_cast< secp256k1_pubkey* >( get_public_key()._my->_key.data() ),
+         input.data(),
+         input.size() ),
+      exception,
+      "failed to generate random proof"
+   );
+
+   digest_type digest( 32 );
+   KOINOS_ASSERT(
+      secp256k1_vrf_proof_to_hash(
+         reinterpret_cast< unsigned char* >( digest.data() ),
+         reinterpret_cast< unsigned char* >( const_cast< char* >( proof.data() ) )
+      ),
+      exception,
+      "failed to hash random proof"
+   );
+
+   return std::make_pair( std::move( proof ), multihash( multicodec::sha2_256, std::move( digest ) ) );
+}
+
+public_key private_key::get_public_key() const
 {
    KOINOS_ASSERT( _key != empty_priv(), key_manipulation_error, "cannot get private key of an empty public key" );
    public_key pk;
