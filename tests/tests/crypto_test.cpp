@@ -416,6 +416,14 @@ BOOST_AUTO_TEST_CASE( vrf_tests )
    proof_hash = pub_key.verify_random_proof( msg, proof );
 
    BOOST_CHECK_EQUAL( koinos::util::to_hex( proof_hash.digest() ), expected_hash );
+
+   BOOST_TEST_MESSAGE( "Test invalid proof size" );
+
+   proof = koinos::util::from_hex< std::string >( "0x031f4dbca087a1972d04a07a779b7df1caa99e0f5db2aa21f3aecc4f9e10e85d0814faa89697b482daa377fb6b4a8b0191a65d34a6d90a8a2461e5db9205d4cf0bb4b2c31b5ef6997a585a9f1a72517b" );
+   BOOST_CHECK_THROW( pub_key.verify_random_proof( msg, proof ), vrf_validation_error );
+
+   proof = koinos::util::from_hex< std::string >( "0x031f4dbca087a1972d04a07a779b7df1caa99e0f5db2aa21f3aecc4f9e10e85d0814faa89697b482daa377fb6b4a8b0191a65d34a6d90a8a2461e5db9205d4cf0bb4b2c31b5ef6997a585a9f1a72517b6f00" );
+   BOOST_CHECK_THROW( pub_key.verify_random_proof( msg, proof ), vrf_validation_error );
 }
 
 BOOST_AUTO_TEST_SUITE_END()
