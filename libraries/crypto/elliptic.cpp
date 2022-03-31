@@ -220,6 +220,8 @@ bool public_key::valid() const
 
 multihash public_key::verify_random_proof( const std::string& input, const std::string& proof ) const
 {
+   KOINOS_ASSERT( proof.size() == 81, vrf_validation_error, "proof must be 81 bytes" );
+
    digest_type digest( 32 );
    KOINOS_ASSERT(
       secp256k1_vrf_verify(
