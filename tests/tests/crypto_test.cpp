@@ -22,6 +22,7 @@
 #include <koinos/tests/crypto_fixture.hpp>
 
 using namespace koinos::crypto;
+using namespace std::string_literals;
 
 BOOST_FIXTURE_TEST_SUITE( crypto_tests, crypto_fixture )
 
@@ -352,6 +353,77 @@ BOOST_AUTO_TEST_CASE( variadic_hash )
    auto mhash2 = hash( multicodec::ripemd_160, block_topology, std::string( "a quick brown fox jumps over the lazy dog" ), x );
 
    BOOST_REQUIRE( mhash1 == mhash2 );
+}
+
+BOOST_AUTO_TEST_CASE( vrf_tests )
+{
+   BOOST_TEST_MESSAGE( "Test prove" );
+
+   std::string msg = "sample";
+   auto expected_proof = "0x031f4dbca087a1972d04a07a779b7df1caa99e0f5db2aa21f3aecc4f9e10e85d08748c9fbe6b95d17359707bfb8e8ab0c93ba0c515333adcb8b64f372c535e115ccf66ebf5abe6fadb01b5efb37c0a0ec9";
+   auto priv_key = private_key::regenerate( multihash( multicodec::sha2_256, koinos::util::from_hex< digest_type >( "0xc9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721"s ) ) );
+   auto pub_key = priv_key.get_public_key();
+
+   auto [proof, proof_hash] = priv_key.generate_random_proof( msg );
+
+   BOOST_CHECK_EQUAL( koinos::util::to_hex( proof ), expected_proof );
+
+   BOOST_TEST_MESSAGE( "Test verify on invalid proofs" );
+
+   for ( int i = 0; i < proof.size(); i++ )
+   {
+      auto temp = proof.data()[i];
+      if ( temp == 0x00 )
+         const_cast< char* >( proof.data() )[i] = 0x01;
+      else
+         const_cast< char* >( proof.data() )[i] = 0x00;
+
+      BOOST_REQUIRE_THROW( pub_key.verify_random_proof( msg, proof ), vrf_validation_error );
+
+      const_cast< char* >( proof.data() )[ i ] = temp;
+
+      pub_key.verify_random_proof( msg, proof );
+   }
+
+   BOOST_TEST_MESSAGE( "Test the same message with different provers" );
+
+   for ( int i = 0; i < 10; i++ )
+   {
+      auto priv_key = private_key::regenerate( hash( multicodec::sha2_256, i ) );
+      auto [proof, hash1] = priv_key.generate_random_proof( msg );
+      auto hash2 = priv_key.get_public_key().verify_random_proof( msg, proof );
+
+      BOOST_CHECK_EQUAL( hash1, hash2 );
+   }
+
+   BOOST_TEST_MESSAGE( "Test different messages with the same prover" );
+
+   for ( int i = 0; i < 10; i++ )
+   {
+      auto msg = "message" + std::to_string( i );
+      auto [proof, hash1] = priv_key.generate_random_proof( msg );
+      auto hash2 = priv_key.get_public_key().verify_random_proof( msg, proof );
+
+      BOOST_CHECK_EQUAL( hash1, hash2 );
+   }
+
+   BOOST_TEST_MESSAGE( "Test verify" );
+
+   auto expected_hash = "0x612065e309e937ef46c2ef04d5886b9c6efd2991ac484ec64a9b014366fc5d81";
+
+   pub_key = public_key::deserialize( koinos::util::from_hex< compressed_public_key >( "0x032c8c31fc9f990c6b55e3865a184a4ce50e09481f2eaeb3e60ec1cea13a6ae645" ) );
+   proof = koinos::util::from_hex< std::string >( "0x031f4dbca087a1972d04a07a779b7df1caa99e0f5db2aa21f3aecc4f9e10e85d0814faa89697b482daa377fb6b4a8b0191a65d34a6d90a8a2461e5db9205d4cf0bb4b2c31b5ef6997a585a9f1a72517b6f" );
+   proof_hash = pub_key.verify_random_proof( msg, proof );
+
+   BOOST_CHECK_EQUAL( koinos::util::to_hex( proof_hash.digest() ), expected_hash );
+
+   BOOST_TEST_MESSAGE( "Test invalid proof size" );
+
+   proof = koinos::util::from_hex< std::string >( "0x031f4dbca087a1972d04a07a779b7df1caa99e0f5db2aa21f3aecc4f9e10e85d0814faa89697b482daa377fb6b4a8b0191a65d34a6d90a8a2461e5db9205d4cf0bb4b2c31b5ef6997a585a9f1a72517b" );
+   BOOST_CHECK_THROW( pub_key.verify_random_proof( msg, proof ), vrf_validation_error );
+
+   proof = koinos::util::from_hex< std::string >( "0x031f4dbca087a1972d04a07a779b7df1caa99e0f5db2aa21f3aecc4f9e10e85d0814faa89697b482daa377fb6b4a8b0191a65d34a6d90a8a2461e5db9205d4cf0bb4b2c31b5ef6997a585a9f1a72517b6f00" );
+   BOOST_CHECK_THROW( pub_key.verify_random_proof( msg, proof ), vrf_validation_error );
 }
 
 BOOST_AUTO_TEST_SUITE_END()

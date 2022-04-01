@@ -52,6 +52,11 @@ hunter_config(libsecp256k1
    SHA1 "0534fa8948f279b26fd102905215a56f0ad7fa18"
 )
 
+hunter_config(libsecp256k1-vrf
+   URL "https://github.com/koinos/secp256k1-vrf/archive/db479e83be5685f652a9bafefaef77246fdf3bbe.tar.gz"
+   SHA1 "62df75e061c4afd6f0548f1e8267cc3da6abee15"
+)
+
 hunter_config(ethash
    URL "https://github.com/chfast/ethash/archive/refs/tags/v0.8.0.tar.gz"
    SHA1 "41fd440f70b6a8dfc3fd29b20f471dcbd1345ad0"
