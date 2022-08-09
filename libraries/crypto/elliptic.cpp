@@ -181,6 +181,11 @@ compressed_public_key public_key::serialize() const
    return _my->serialize();
 }
 
+uncompressed_public_key public_key::serialize_uncompressed() const
+{
+   return _my->serialize_uncompressed();
+}
+
 public_key public_key::deserialize( const compressed_public_key& cpk )
 {
    public_key pk;
