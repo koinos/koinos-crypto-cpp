@@ -56,6 +56,7 @@ namespace detail {
       ~public_key_impl();
 
       compressed_public_key serialize() const;
+      uncompressed_public_key serialize_uncompressed() const;
 
       public_key_impl add( const multihash& offset ) const;
 
@@ -90,15 +91,35 @@ namespace detail {
       KOINOS_ASSERT(
          secp256k1_ec_pubkey_serialize(
             _get_context(),
-            (unsigned char *) cpk.data(),
+            reinterpret_cast< unsigned char* >( cpk.data() ),
             &len,
-            (const secp256k1_pubkey*) _key.data(),
+            reinterpret_cast< const secp256k1_pubkey* >( _key.data() ),
             SECP256K1_EC_COMPRESSED ),
          key_serialization_error, "unknown error during public key serialization" );
       KOINOS_ASSERT( len == cpk.size(), key_serialization_error,
          "serialized key does not match expected size of ${n} bytes", ("n", cpk.size()) );
 
       return cpk;
+   }
+
+   uncompressed_public_key public_key_impl::serialize_uncompressed() const
+   {
+      KOINOS_ASSERT( _key != empty_pub(), key_serialization_error, "cannot serialize an empty public key" );
+
+      uncompressed_public_key upk;
+      size_t len = upk.size();
+      KOINOS_ASSERT(
+         secp256k1_ec_pubkey_serialize(
+            _get_context(),
+            reinterpret_cast< unsigned char* >( upk.data() ),
+            &len,
+            reinterpret_cast< const secp256k1_pubkey* >( _key.data() ),
+            SECP256K1_EC_UNCOMPRESSED ),
+         key_serialization_error, "unknown error during public key serialization" );
+      KOINOS_ASSERT( len == upk.size(), key_serialization_error,
+         "serialized key does not match expected size of ${n} bytes", ("n", upk.size()) );
+
+      return upk;
    }
 
    public_key_impl public_key_impl::add( const multihash& hash ) const
@@ -166,9 +187,22 @@ public_key public_key::deserialize( const compressed_public_key& cpk )
    KOINOS_ASSERT(
       secp256k1_ec_pubkey_parse(
          _get_context(),
-         (secp256k1_pubkey*) pk._my->_key.data(),
-         (const unsigned char*) cpk.data(),
+         reinterpret_cast< secp256k1_pubkey* >( pk._my->_key.data() ),
+         reinterpret_cast< const unsigned char* >( cpk.data() ),
          cpk.size() ),
+      key_serialization_error, "unknown error during public key deserialization" );
+   return pk;
+}
+
+public_key public_key::deserialize( const uncompressed_public_key& upk )
+{
+   public_key pk;
+   KOINOS_ASSERT(
+      secp256k1_ec_pubkey_parse(
+         _get_context(),
+         reinterpret_cast< secp256k1_pubkey* >( pk._my->_key.data() ),
+         reinterpret_cast< const unsigned char* >( upk.data() ),
+         upk.size() ),
       key_serialization_error, "unknown error during public key deserialization" );
    return pk;
 }

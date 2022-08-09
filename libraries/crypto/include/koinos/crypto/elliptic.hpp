@@ -6,9 +6,10 @@
 
 namespace koinos { namespace crypto {
 
-   using recoverable_signature = std::array< std::byte, 65 >; ///< A 65 byte recoverable ECDSA siganture
-   using compressed_public_key = std::array< std::byte, 33 >; ///< The 33 byte compressed ECDSA public key
-   using private_key_secret    = std::array< std::byte, 32 >; ///< The 32 byte ECDSA prvate key secret
+   using recoverable_signature   = std::array< std::byte, 65 >; ///< A 65 byte recoverable ECDSA siganture
+   using compressed_public_key   = std::array< std::byte, 33 >; ///< The 33 byte compressed ECDSA public key
+   using uncompressed_public_key = std::array< std::byte, 65 >; ///< The 65 byte uncompressed ECDSA public key
+   using private_key_secret      = std::array< std::byte, 32 >; ///< The 32 byte ECDSA prvate key secret
 
    KOINOS_DECLARE_EXCEPTION( key_serialization_error );
    KOINOS_DECLARE_EXCEPTION( key_recovery_error );
@@ -37,6 +38,9 @@ namespace koinos { namespace crypto {
 
          compressed_public_key serialize() const;
          static public_key deserialize( const compressed_public_key& cpk );
+
+         uncompressed_public_key serialize_uncompressed() const;
+         static public_key deserialize( const uncompressed_public_key& upk );
 
          operator compressed_public_key() const { return serialize(); }
 
