@@ -10,6 +10,7 @@
 
 #include <koinos/bigint.hpp>
 
+#include <koinos/util/base58.hpp>
 #include <koinos/util/conversion.hpp>
 #include <koinos/util/hex.hpp>
 
@@ -126,8 +127,9 @@ BOOST_AUTO_TEST_CASE( private_wif )
 {
    std::string secret = "foobar";
    std::string wif = "5KJTiKfLEzvFuowRMJqDZnSExxxwspVni1G4RcggoPtDqP5XgM1";
+   std::string compressed_wif = "L3n4uPNBvne4p6BCUdhpThYQe21wDJe4jz9U7eWAfn15e9tj2jAF";
    private_key key1 = private_key::regenerate( hash( multicodec::sha2_256, secret.c_str(), secret.size() ) );
-   BOOST_CHECK_EQUAL( key1.to_wif(), wif );
+   BOOST_CHECK_EQUAL( key1.to_wif(), compressed_wif );
 
    private_key key2 = private_key::from_wif( wif );
    BOOST_CHECK( key1 == key2 );
@@ -161,6 +163,22 @@ BOOST_AUTO_TEST_CASE( public_address )
    std::string address_bytes( reinterpret_cast< const char* >( bytes ), sizeof( bytes ) );
 
    BOOST_REQUIRE_EQUAL( address, address_bytes );
+}
+
+BOOST_AUTO_TEST_CASE( compressed_key )
+{
+   std::string uncompressed_wif = "5JtU2c2MHKb8xSeNvsZJpxZRXeRg6iq6uwc6EUtDA9zsWM6B4c5";
+   auto priv_key = private_key::from_wif( uncompressed_wif );
+
+   std::string expected_wif = "L1xAJ5axX33g7iBynn9bggE7GGBuaFdK6g1t6W52fQiRvQi73evQ";
+   BOOST_CHECK_EQUAL( priv_key.to_wif(), expected_wif );
+
+   std::string expected_address = "13Sqw4TrwdZ8RZ9UVfqqA2i3mrbeumcWba";
+   BOOST_CHECK_EQUAL( koinos::util::to_base58( priv_key.get_public_key().to_address_bytes() ), expected_address );
+
+   priv_key = private_key::from_wif( expected_wif );
+   BOOST_CHECK_EQUAL( priv_key.to_wif(), expected_wif );
+   BOOST_CHECK_EQUAL( koinos::util::to_base58( priv_key.get_public_key().to_address_bytes() ), expected_address );
 }
 
 BOOST_AUTO_TEST_CASE( zerohash )

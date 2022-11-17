@@ -449,28 +449,32 @@ public_key private_key::get_public_key() const
 
 std::string private_key::to_wif( std::byte prefix )
 {
-   std::array< std::byte, 37 > d;
+   std::array< std::byte, 38 > d;
    uint32_t check;
-   assert( _key.size() + sizeof(check) + 1 == d.size() );
+   assert( _key.size() + sizeof(check) + 2 == d.size() );
    d[0] = prefix;
    std::memcpy( d.data() + 1, _key.data(), _key.size() );
-   auto extended_hash = hash( multicodec::sha2_256, (char*)d.data(), _key.size() + 1 );
+   d.data()[ _key.size() + 1 ] = std::byte( 0x01 );
+   auto extended_hash = hash( multicodec::sha2_256, (char*)d.data(), _key.size() + 2 );
    check = *((uint32_t*)hash( multicodec::sha2_256, extended_hash ).digest().data());
-   std::memcpy( d.data() + _key.size() + 1, (const char*)&check, sizeof(check)  );
+   std::memcpy( d.data() + _key.size() + 2, (const char*)&check, sizeof(check)  );
    return util::encode_base58( d );
 }
 
 private_key private_key::from_wif( const std::string& b58, std::byte prefix )
 {
-   std::array< char, 37 > d;
+   std::vector< char > d;
+   d.reserve( 38 );
    util::decode_base58( b58, d );
    KOINOS_ASSERT( d[0] == std::to_integer< char >( prefix ), key_serialization_error, "incorrect wif prefix" );
+   bool compressed = d.size() == 38;
+   KOINOS_ASSERT( !compressed || d[33] == 0x01, key_serialization_error, "compressed byte was not 0x01" );
    private_key key;
-   auto extended_hash = hash( multicodec::sha2_256, d.data(), key._key.size() + 1 );
+   auto extended_hash = hash( multicodec::sha2_256, d.data(), key._key.size() + ( compressed ? 2 : 1 ) );
    uint32_t check = *((uint32_t*)hash( multicodec::sha2_256, extended_hash ).digest().data());
 
    KOINOS_ASSERT(
-      std::memcmp( (char*)&check, d.data() + key._key.size() + 1, sizeof(check) ) == 0,
+      std::memcmp( (char*)&check, d.data() + key._key.size() + ( compressed ? 2 : 1 ), sizeof(check) ) == 0,
       key_serialization_error,
       "invalid checksum"
    );
