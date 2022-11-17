@@ -468,7 +468,7 @@ private_key private_key::from_wif( const std::string& b58, std::byte prefix )
    util::decode_base58( b58, d );
    KOINOS_ASSERT( d[0] == std::to_integer< char >( prefix ), key_serialization_error, "incorrect wif prefix" );
    bool compressed = d.size() == 38;
-   KOINOS_ASSERT( !compressed || d[33] == 0x01, key_serialization_error, "compressed byte was not 0x10" );
+   KOINOS_ASSERT( !compressed || d[33] == 0x01, key_serialization_error, "compressed byte was not 0x01" );
    private_key key;
    auto extended_hash = hash( multicodec::sha2_256, d.data(), key._key.size() + ( compressed ? 2 : 1 ) );
    uint32_t check = *((uint32_t*)hash( multicodec::sha2_256, extended_hash ).digest().data());
