@@ -86,12 +86,18 @@ bool multihash::operator!=( const multihash& rhs ) const
 
 bool multihash::operator<( const multihash &rhs ) const
 {
-   return _code < rhs._code || _digest < rhs._digest;
+   if ( _code != rhs._code )
+      return _code < rhs._code;
+
+   return _digest < rhs._digest;
 }
 
 bool multihash::operator>( const multihash &rhs ) const
 {
-   return _code > rhs._code || _digest > rhs._digest;
+   if ( _code != rhs._code )
+      return _code > rhs._code;
+
+   return _digest > rhs._digest;
 }
 
 bool multihash::operator<=( const multihash &rhs ) const
