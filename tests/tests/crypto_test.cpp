@@ -100,6 +100,47 @@ BOOST_AUTO_TEST_CASE( keccak_256_test )
    BOOST_CHECK_EQUAL( koinos::util::to_hex( h2.digest() ), "0x0ea33e2e34f572440640244c7f1f5f04697ce97139bda72a6558d8663c02b388" );
 }
 
+BOOST_AUTO_TEST_CASE( multihash_comparison )
+{
+   auto sha256_hash = multihash::zero( multicodec::sha2_256 );
+   auto sha1_hash = hash( multicodec::sha1, sha256_hash );
+   auto sha512_hash = hash( multicodec::sha2_512, sha1_hash );
+
+   BOOST_CHECK( sha1_hash < sha256_hash );
+   BOOST_CHECK( !(sha1_hash > sha256_hash) );
+   BOOST_CHECK( !(sha256_hash < sha1_hash) );
+   BOOST_CHECK( sha256_hash > sha1_hash );
+
+   BOOST_CHECK( sha1_hash < sha512_hash );
+   BOOST_CHECK( !(sha1_hash > sha512_hash) );
+   BOOST_CHECK( !(sha512_hash < sha1_hash) );
+   BOOST_CHECK( sha512_hash > sha1_hash );
+
+   BOOST_CHECK( sha256_hash < sha512_hash );
+   BOOST_CHECK( !(sha256_hash > sha512_hash) );
+   BOOST_CHECK( !(sha512_hash < sha256_hash) );
+   BOOST_CHECK( sha512_hash > sha256_hash );
+
+   auto sha1_hash2 = hash( multicodec::sha1, sha1_hash );
+   auto sha256_hash2 = hash( multicodec::sha2_256, sha256_hash );
+   auto sha512_hash2 = hash( multicodec::sha2_512, sha512_hash );
+
+   BOOST_CHECK( sha1_hash < sha1_hash2 );
+   BOOST_CHECK( !(sha1_hash > sha1_hash2) );
+   BOOST_CHECK( !(sha1_hash2 < sha1_hash) );
+   BOOST_CHECK( sha1_hash2 > sha1_hash );
+
+   BOOST_CHECK( sha256_hash < sha256_hash2 );
+   BOOST_CHECK( !(sha256_hash > sha256_hash2) );
+   BOOST_CHECK( !(sha256_hash2 < sha256_hash) );
+   BOOST_CHECK( sha256_hash2 > sha256_hash );
+
+   BOOST_CHECK( sha512_hash > sha512_hash2 );
+   BOOST_CHECK( !(sha512_hash < sha512_hash2) );
+   BOOST_CHECK( !(sha512_hash2 > sha512_hash) );
+   BOOST_CHECK( sha512_hash2 < sha512_hash );
+}
+
 BOOST_AUTO_TEST_CASE( ecc )
 {
    private_key nullkey;
