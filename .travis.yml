@@ -10,10 +10,17 @@ addons:
       - python3
       - python3-pip
       - python3-setuptools
+      - clang-format
+      - clang-tidy
+      - clang
     update: true
 
 jobs:
   include:
+    - os: linux
+      dist: jammy
+      env:
+        - RUN_TYPE=static-analysis
     - os: linux
       dist: jammy
       env:
