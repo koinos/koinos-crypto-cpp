@@ -19,6 +19,8 @@ target_link_libraries(
       protobuf::libprotobuf
       ethash::ethash)
 
+koinos_add_format_target(crypto)
+
 target_include_directories(
   crypto
     PUBLIC
