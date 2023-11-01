@@ -69,7 +69,7 @@ install(
 )
 
 configure_package_config_file(
-  cmake/project.cmake.in
+  cmake/Templates/project.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
