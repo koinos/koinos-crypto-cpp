@@ -4,9 +4,10 @@ enable_testing()
 
 koinos_add_test(koinos_crypto_tests
   SOURCES
+    crypto_test.cpp
+    main.cpp
+
     include/koinos/tests/crypto_fixture.hpp
-    tests/crypto_test.cpp
-    tests/main.cpp
 )
 
 target_link_libraries(koinos_crypto_tests Koinos::crypto)

@@ -1,4 +1,4 @@
 #define BOOST_TEST_MODULE koinos_crypto_tests
-#include <boost/test/unit_test.hpp>
+// OVERRIDE_BOOST_TEST_INCLUDED_WARNING
 #include <boost/test/included/unit_test.hpp>
 
