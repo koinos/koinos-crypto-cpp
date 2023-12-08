@@ -23,7 +23,6 @@ target_link_libraries(
 
 koinos_add_format_target(crypto)
 
-
 target_include_directories(
   crypto
     PUBLIC

@@ -43,9 +43,7 @@ koinos_add_package(Boost CONFIG REQUIRED
 
 koinos_add_package(yaml-cpp)
 koinos_add_package(OpenSSL REQUIRED)
-
 koinos_add_package(abseil NAME absl CONFIG REQUIRED)
-
 koinos_add_package(ethash CONFIG REQUIRED)
 koinos_add_package(nlohmann_json CONFIG REQUIRED)
 koinos_add_package(libsecp256k1-vrf CONFIG REQUIRED)
