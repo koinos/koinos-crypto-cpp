@@ -21,19 +21,21 @@ target_link_libraries(
       ethash::ethash
 )
 
-koinos_add_format_target(crypto)
-
 target_include_directories(
   crypto
     PUBLIC
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
       $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
+koinos_add_format(TARGET crypto)
+
 add_library(Koinos::crypto ALIAS crypto)
+
+koinos_install(TARGETS crypto)
 
 install(
   DIRECTORY
     ${PROJECT_SOURCE_DIR}/include
   DESTINATION
-    include/
+    ${CMAKE_INSTALL_PREFIX}
 )
