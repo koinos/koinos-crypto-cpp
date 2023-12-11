@@ -1,7 +1,7 @@
 add_library(crypto
-  elliptic.cpp
-  multihash.cpp
-  openssl.cpp
+  koinos/crypto/elliptic.cpp
+  koinos/crypto/multihash.cpp
+  koinos/crypto/openssl.cpp
 
   ${PROJECT_SOURCE_DIR}/include/koinos/crypto/elliptic.hpp
   ${PROJECT_SOURCE_DIR}/include/koinos/crypto/merkle_tree.hpp
