@@ -16,16 +16,15 @@ target_link_libraries(
       Koinos::util
       OpenSSL::SSL
       OpenSSL::Crypto
-      secp256k1-vrf::secp256k1-vrf
-      protobuf::libprotobuf
+    PRIVATE
       ethash::ethash
-)
+      secp256k1-vrf::secp256k1-vrf)
 
 target_include_directories(
   crypto
     PUBLIC
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+      $<INSTALL_INTERFACE:include>)
 
 koinos_add_format(TARGET crypto)
 
@@ -37,5 +36,4 @@ install(
   DIRECTORY
     ${PROJECT_SOURCE_DIR}/include
   DESTINATION
-    ${CMAKE_INSTALL_PREFIX}
-)
+    ${CMAKE_INSTALL_PREFIX})
