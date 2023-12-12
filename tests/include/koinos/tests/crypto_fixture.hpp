@@ -13,13 +13,13 @@ static const std::string TEST2( "" );
 static const std::string TEST3( "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" );
 static const std::string TEST4(
   "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu" );
-static char TEST5[ 1000001 ];
+static char TEST5[ 1'000'001 ];
 static const std::string TEST6( "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmno" );
 
 static void init_5()
 {
   memset( TEST5, 'a', sizeof( TEST5 ) - 1 );
-  TEST5[ 1000000 ] = 0;
+  TEST5[ 1'000'000 ] = 0;
 }
 
 struct crypto_fixture
@@ -57,7 +57,7 @@ struct crypto_fixture
     {
       enc.put( c );
     }
-    for( int i = 0; i < 16777215; i++ )
+    for( int i = 0; i < 16'777'215; i++ )
     {
       enc.write( TEST6.c_str(), TEST6.size() );
     }
