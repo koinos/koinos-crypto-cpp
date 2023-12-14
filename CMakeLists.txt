@@ -16,8 +16,7 @@ include(FetchContent)
 FetchContent_Declare(
   koinos_cmake
   GIT_REPOSITORY https://github.com/koinos/koinos-cmake.git
-  GIT_TAG        cd7a2c74b1de15bceb71843bb574099519f8666c
-)
+  GIT_TAG        871ef93b0b7c0c9548467fc28c1c09e003ad262b)
 FetchContent_MakeAvailable(koinos_cmake)
 
 include("${koinos_cmake_SOURCE_DIR}/Koinos.cmake")
@@ -30,8 +29,8 @@ project(koinos_crypto
 koinos_define_version()
 
 koinos_add_package(Boost CONFIG REQUIRED
-  ADD_COMPONENTS log exception test
-  FIND_COMPONENTS log log_setup
+  ADD_COMPONENTS log exception program_options test
+  FIND_COMPONENTS log log_setup exception program_options
 )
 
 koinos_add_package(yaml-cpp)
