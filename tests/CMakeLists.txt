@@ -12,7 +12,7 @@ koinos_add_test(crypto_tests
     include/koinos/tests/crypto_fixture.hpp
 )
 
-target_link_libraries(crypto_tests PRIVATE Koinos::crypto)
+target_link_libraries(crypto_tests PRIVATE crypto)
 
 target_include_directories(
   crypto_tests

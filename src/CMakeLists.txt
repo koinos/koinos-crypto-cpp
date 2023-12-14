@@ -28,8 +28,6 @@ target_include_directories(
 
 koinos_add_format(TARGET crypto)
 
-add_library(Koinos::crypto ALIAS crypto)
-
 koinos_install(TARGETS crypto)
 
 install(
