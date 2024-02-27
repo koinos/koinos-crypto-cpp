@@ -65,8 +65,8 @@ cmake --build . --config Debug --parallel 3 --target coverage
 You can run tests in different sanitizer profiles. Those profiles are None (Default), Address, Stack, and Thread. Currently, these are only known to work with clang, but may work with gcc with additional environment configuration.
 
 ```
-cmake -D CMAKE_BUILT_TYPE=Release -D SANITIZER=Address ..
-cmake --build . --config Release --parallel --target util_tests
+cmake -D CMAKE_BUILT_TYPE=Debug -D SANITIZER=Address ..
+cmake --build . --config Debug --parallel --target util_tests
 cd tests
 ctest -j
 ```
