@@ -66,7 +66,7 @@ You can run tests in different sanitizer profiles. Those profiles are None (Defa
 
 ```
 cmake -D CMAKE_BUILT_TYPE=Debug -D SANITIZER=Address ..
-cmake --build . --config Debug --parallel --target util_tests
+cmake --build . --config Debug --parallel --target crypto_tests
 cd tests
 ctest -j
 ```
