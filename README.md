@@ -6,15 +6,12 @@ This library contains code for the Koinos cryptographic functions.
 
 This project's structure follows the [Pitchfork](https://api.csswg.org/bikeshed/?force=1&url=https://raw.githubusercontent.com/vector-of-bool/pitchfork/develop/data/spec.bs) specification.
 
-**`build`**: An ephemeral directory for building the project. Not checked in, but excluded via `.gitignore`.
-
-**`include`**: Contains all public headers for the Koinos Crypto.
-
-**`src`**: Contains all source code and private headers for Koinos Crypto.
-
-**`tests`**: Contains tests for Koinos Crypto.
-
-**`tools`**: Contains additional tooling for Koinos Crypto, primarily CI scripts.
+```
+├── build/   # An ephemeral directory for building the project. Not checked in, but excluded via .gitignore.
+├── include/ # Contains all public headers for the Koinos Crypto.
+├── src/     # Contains all source code and private headers for Koinos Crypto.
+└── tests/   # Contains tests for Koinos Crypto.
+```
 
 ### Building
 
@@ -65,7 +62,7 @@ cmake --build . --config Debug --parallel 3 --target coverage
 You can run tests in different sanitizer profiles. Those profiles are None (Default), Address, Stack, and Thread. Currently, these are only known to work with clang, but may work with gcc with additional environment configuration.
 
 ```
-cmake -D CMAKE_BUILT_TYPE=Debug -D SANITIZER=Address ..
+cmake -D CMAKE_BUILD_TYPE=Debug -D SANITIZER=Address ..
 cmake --build . --config Debug --parallel --target crypto_tests
 cd tests
 ctest -j
