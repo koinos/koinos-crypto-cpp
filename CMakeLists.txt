@@ -24,7 +24,7 @@ koinos_add_package(Boost CONFIG REQUIRED
   FIND_COMPONENTS log log_setup exception program_options
 )
 
-koinos_add_package(yaml-cpp)
+koinos_add_package(yaml-cpp CONFIG REQUIRED)
 koinos_add_package(OpenSSL REQUIRED)
 koinos_add_package(ethash CONFIG REQUIRED)
 koinos_add_package(nlohmann_json CONFIG REQUIRED)
